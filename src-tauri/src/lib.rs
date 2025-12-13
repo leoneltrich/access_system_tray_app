@@ -2,7 +2,7 @@ mod constants;
 mod tray;
 mod window;
 
-use tauri::Manager; // Import Manager to access .handle() (if needed depending on tauri version)
+use tauri::ActivationPolicy;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -18,6 +18,10 @@ pub fn run() {
             // 2. Initialize Window Behaviors (pass the handle)
             window::setup_events(handle);
 
+            #[cfg(target_os = "macos")]
+            {
+                app.set_activation_policy(ActivationPolicy::Accessory);
+            }
             Ok(())
         })
         .run(tauri::generate_context!())
