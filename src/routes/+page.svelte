@@ -1,53 +1,89 @@
-<script>
+<script lang="ts">
+  // No logic needed for now
 </script>
 
-<div class="window-wrapper">
-  <div class="app-container">
-    <slot />
+<div class="view-content">
+  <div class="view-header">
+    <h1 class="view-title">System Ready</h1>
+  </div>
+
+  <div class="view-body">
+    <p class="description">
+      Waiting for tray events...
+    </p>
+
+    <div class="card">
+      <h3>Quick Actions</h3>
+      <div class="actions">
+        <button>Restart</button>
+        <button>Logs</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
-  /* 1. NUCLEAR RESET: Force the browser window to be empty */
-  :global(html), :global(body) {
-    margin: 0 !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    width: 100%;
-    height: 100%;
-    overflow: hidden; /* Stops scrollbars appearing in the gap */
-  }
-
-  .window-wrapper {
-    width: 100vw;
-    height: 100vh;
-
-    padding-top: 10px;
-    padding-bottom: 10px;
-
+  /* 1. LAYOUT STRUCTURE */
+  .view-content {
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
-
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    height: 100%;
   }
 
-  .app-container {
-    flex: 1;
-    width: 100%;
+  /* 2. HEADER */
+  .view-header {
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
 
-    background-color: #111111;
+  .view-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1;
+  }
 
-    border-radius: 18px;
+  /* 3. BODY CONTENT */
+  .view-body {
+    flex: 1; /* Allows this area to grow if needed */
+  }
 
-    overflow: hidden;
+  .description {
+    color: #888;
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+  }
 
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
     padding: 1rem;
-    box-sizing: border-box;
   }
+
+  .card h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  button {
+    background: #222;
+    border: 1px solid #333;
+    color: #ddd;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+  }
+
+  button:hover { background: #333; }
 </style>

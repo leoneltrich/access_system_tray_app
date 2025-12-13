@@ -22,6 +22,7 @@ pub fn handle_tray_click<R: Runtime>(app: &AppHandle<R>, event: TrayIconEvent) {
             } else {
                 let _ = window.show();
                 let _ = window.set_focus();
+                let _ = window.set_always_on_top(true);
             }
         }
     }

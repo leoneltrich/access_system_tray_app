@@ -7,10 +7,16 @@
   ],
   "permissions": [
     "core:default",
-    "opener:default",
-    "http:default",
-    "notification:default",
     "store:default",
-    "positioner:default"
+    "positioner:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "http://localhost:3000/**" },
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ],
+      "deny": []
+    }
   ]
 }
