@@ -1,8 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { CheckCircle2, AlertCircle } from 'lucide-svelte';
-
-    // Import our new Auth Logic
     import {
         isAuthenticated,
         authLoading,
@@ -15,7 +13,6 @@
     let username = "";
     let password = "";
 
-    // Initialize auth check when view opens
     onMount(() => {
         initAuth();
     });
@@ -26,7 +23,6 @@
     }
 
     function handleLogout() {
-        // Clear local inputs on logout for security
         username = "";
         password = "";
         logout();
@@ -41,7 +37,7 @@
     <div class="view-body">
 
         {#if !$isAuthenticated}
-            <div class="login-form">
+            <div class="content-wrapper">
                 <p class="subtitle">Please sign in to continue.</p>
 
                 {#if $authError}
@@ -67,39 +63,39 @@
                             on:keydown={(e) => e.key === 'Enter' && handleLogin()}
                     />
                 </div>
-
-                <button
-                        class="action-btn primary"
-                        on:click={handleLogin}
-                        disabled={$authLoading}
-                >
-                    {#if $authLoading}
-                        Signing in...
-                    {:else}
-                        Sign In
-                    {/if}
-                </button>
             </div>
 
         {:else}
-            <div class="logged-in-state">
+            <div class="content-wrapper centered">
                 <div class="success-icon">
                     <CheckCircle2 size={48} color="#10b981" />
                 </div>
                 <h3>Authenticated</h3>
                 <p>You are logged in securely.</p>
-
-                <button class="action-btn secondary" on:click={handleLogout}>
-                    Sign Out
-                </button>
             </div>
         {/if}
 
     </div>
+
+    <div class="footer">
+        {#if !$isAuthenticated}
+            <button
+                    class="action-btn primary"
+                    on:click={handleLogin}
+                    disabled={$authLoading}
+            >
+                {#if $authLoading}Signing in...{:else}Sign In{/if}
+            </button>
+        {:else}
+            <button class="action-btn secondary" on:click={handleLogout}>
+                Sign Out
+            </button>
+        {/if}
+    </div>
 </div>
 
 <style>
-    /* --- SHARED LAYOUT --- */
+    /* --- LAYOUT --- */
     .view-content {
         display: flex;
         flex-direction: column;
@@ -111,29 +107,42 @@
         display: flex;
         align-items: center;
         margin-bottom: 2rem;
+        flex-shrink: 0;
     }
 
     .view-title {
         margin: 0;
         font-size: 1.25rem;
         font-weight: 600;
-        line-height: 1;
     }
 
+    /* Pushes footer to bottom */
     .view-body {
         flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
     }
 
-    /* --- LOGIN FORM --- */
-    .login-form {
+    .content-wrapper {
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
     }
 
+    .content-wrapper.centered {
+        align-items: center;
+        justify-content: center;
+        height: 100%; /* Center vertically if needed */
+        text-align: center;
+    }
+
+    .footer {
+        margin-top: auto;
+        padding-top: 1rem;
+        flex-shrink: 0;
+    }
+
+    /* --- TEXT & INPUTS --- */
     .subtitle {
         margin: 0;
         color: #888;
@@ -150,7 +159,6 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        animation: fadeIn 0.3s ease;
     }
 
     .input-group {
@@ -169,26 +177,10 @@
         outline: none;
         transition: all 0.2s;
     }
-
-    input:focus {
-        border-color: #555;
-        background: #222;
-    }
-
-    input:disabled {
-        opacity: 0.5;
-        cursor: wait;
-    }
+    input:focus { border-color: #555; background: #222; }
+    input:disabled { opacity: 0.5; }
 
     /* --- LOGGED IN STATE --- */
-    .logged-in-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        animation: fadeIn 0.4s ease;
-    }
-
     .success-icon {
         background: rgba(16, 185, 129, 0.1);
         padding: 1rem;
@@ -196,23 +188,8 @@
         margin-bottom: 1rem;
         display: flex;
     }
-
-    .logged-in-state h3 {
-        margin: 0 0 0.5rem 0;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    .logged-in-state p {
-        color: #888;
-        margin: 0 0 2rem 0;
-        font-size: 0.9rem;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-    }
+    h3 { margin: 0 0 0.5rem 0; font-weight: 600; font-size: 1.1rem; }
+    p { color: #888; margin: 0; font-size: 0.9rem; }
 
     /* --- BUTTONS --- */
     .action-btn {
@@ -225,18 +202,7 @@
         border: none;
         transition: opacity 0.2s;
     }
-
     .action-btn:hover { opacity: 0.9; }
-    .action-btn:disabled { opacity: 0.7; cursor: wait; }
-
-    .action-btn.primary {
-        background: white;
-        color: black;
-    }
-
-    .action-btn.secondary {
-        background: #222;
-        border: 1px solid #333;
-        color: #ddd;
-    }
+    .action-btn.primary { background: white; color: black; }
+    .action-btn.secondary { background: #222; border: 1px solid #333; color: #ddd; }
 </style>
