@@ -1,25 +1,53 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Plus, Trash2, RefreshCw, ShieldCheck } from 'lucide-svelte';
+  import { Plus, Trash2, RefreshCw, ShieldCheck, Loader2, AlertCircle } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import { servers, loadServers, removeServer } from '$lib/stores/servers';
+  import {
+    servers,
+    loadServers,
+    removeServer,
+    requestAccess
+  } from '$lib/stores/servers';
+
+  // Track loading state for each server card independently
+  let loadingStates: Record<string, boolean> = {};
+
+  // Track temporary errors to show on cards
+  let errorStates: Record<string, string> = {};
 
   onMount(() => {
     loadServers();
   });
 
-  // --- HANDLERS ---
-
   function goAddServer() {
     goto('/add-server');
   }
 
-  function handleGetAccess(id: string) {
-    console.log(`Requesting access for ${id}...`);
+  async function handleGetAccess(id: string) {
+    loadingStates[id] = true;
+    loadingStates = { ...loadingStates }; // Trigger reactivity
+    errorStates[id] = "";
+
+    try {
+      await requestAccess(id);
+    } catch (err: any) {
+      errorStates[id] = "Failed";
+      console.error(err);
+
+      setTimeout(() => {
+        if(errorStates[id]) {
+          delete errorStates[id];
+          errorStates = {...errorStates};
+        }
+      }, 3000);
+    } finally {
+      delete loadingStates[id];
+      loadingStates = { ...loadingStates };
+    }
   }
 
   function handleRefresh(id: string) {
-    console.log(`Refreshing status for ${id}...`);
+    handleGetAccess(id);
   }
 </script>
 
@@ -38,6 +66,7 @@
       <div class="grid-container">
         {#each $servers as server (server.id)}
           <div class="card">
+
             <div class="card-header">
               <span class="server-name">{server.id}</span>
               <button
@@ -50,23 +79,47 @@
             </div>
 
             <div class="card-status">
-              <span class="status-dot" class:active={server.status === 'access-granted'}></span>
-              <span class="status-text">
-                {server.status === 'access-granted' ? 'Access Granted' : 'No Access'}
-              </span>
+              {#if errorStates[server.id]}
+                <span class="error-text">
+                  <AlertCircle size={12}/> Failed
+                </span>
+              {:else}
+                <span class="status-dot" class:active={server.status === 'access-granted'}></span>
+                <span class="status-text">
+                  {server.status === 'access-granted' ? 'Access Granted' : 'No Access'}
+                </span>
+              {/if}
             </div>
 
             <div class="card-actions">
-              <button class="action-btn" on:click={() => handleGetAccess(server.id)}>
-                <ShieldCheck size={16} />
-                <span>Get Access</span>
+
+              <button
+                      class="action-btn"
+                      class:success={server.status === 'access-granted'}
+                      on:click={() => handleGetAccess(server.id)}
+                      disabled={loadingStates[server.id]}
+              >
+                {#if loadingStates[server.id]}
+                  <div class="spin"><Loader2 size={16} /></div>
+                  <span>Verifying...</span>
+                {:else if server.status === 'access-granted'}
+                  <ShieldCheck size={16} />
+                  <span>Active</span>
+                {:else}
+                  <ShieldCheck size={16} />
+                  <span>Get Access</span>
+                {/if}
               </button>
 
-              {#if server.status === 'access-granted'}
-                <button class="icon-btn refresh" on:click={() => handleRefresh(server.id)}>
-                  <RefreshCw size={16} />
-                </button>
-              {/if}
+              <button
+                      class="icon-btn refresh"
+                      on:click={() => handleRefresh(server.id)}
+                      disabled={loadingStates[server.id] || server.status !== 'access-granted'}
+                      title="Extend Access"
+              >
+                <RefreshCw size={16} class={loadingStates[server.id] ? "spin" : ""} />
+              </button>
+
             </div>
           </div>
         {/each}
@@ -111,7 +164,6 @@
     padding-right: 4px;
     scrollbar-width: none;
   }
-
   .view-body::-webkit-scrollbar { display: none; }
 
   /* --- EMPTY STATE --- */
@@ -170,6 +222,7 @@
     gap: 6px;
     font-size: 0.8rem;
     color: #888;
+    height: 20px;
   }
 
   .status-dot {
@@ -178,8 +231,13 @@
     border-radius: 50%;
     background-color: #444;
   }
-  .status-dot.active {
-    background-color: #10b981;
+  .status-dot.active { background-color: #10b981; }
+
+  .error-text {
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .card-actions {
@@ -205,6 +263,14 @@
   .icon-btn:hover { color: white; background: rgba(255,255,255,0.1); }
   .icon-btn.delete:hover { color: #ef4444; }
 
+  /* Disabled state for icon buttons */
+  .icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: transparent !important;
+    color: #666 !important;
+  }
+
   .action-btn {
     flex: 1;
     display: flex;
@@ -218,10 +284,19 @@
     border-radius: 6px;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
   }
   .action-btn:hover { background: #444; }
+  .action-btn:disabled { opacity: 0.7; cursor: wait; }
 
+  .action-btn.success {
+    background: #10b981;
+    color: black;
+    font-weight: 600;
+  }
+  .action-btn.success:hover { background: #059669; }
+
+  /* Footer & Layout */
   .footer {
     margin-top: 1rem;
     flex-shrink: 0;
@@ -244,4 +319,10 @@
     transition: all 0.2s ease;
   }
   .add-server-btn:hover { background: #f0f0f0; }
+
+  .spin {
+    animation: spin 1s linear infinite;
+    display: flex;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
 </style>
