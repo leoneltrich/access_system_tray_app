@@ -1,33 +1,41 @@
 <script lang="ts">
-    import { Settings, X } from 'lucide-svelte';
+    import { Settings, X, User } from 'lucide-svelte';
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
 
-    $: isSettingsPage = $page.url.pathname === '/settings';
+    // Determine if we are on a "sub-page" (anything other than home)
+    $: isSubPage = $page.url.pathname !== '/';
 
-    function toggleView() {
-        if (isSettingsPage) {
-            goto('/');
-        } else {
-            goto('/settings');
-        }
+    function goHome() {
+        goto('/');
+    }
+
+    function goSettings() {
+        goto('/settings');
+    }
+
+    function goProfile() {
+        goto('/profile');
     }
 </script>
 
 <div class="window-wrapper">
     <div class="app-container">
 
-        <button
-                class="nav-btn"
-                on:click={toggleView}
-                aria-label={isSettingsPage ? "Close Settings" : "Open Settings"}
-        >
-            {#if isSettingsPage}
-                <X size={18} />
+        <div class="nav-actions">
+            {#if isSubPage}
+                <button class="nav-btn" on:click={goHome} aria-label="Close">
+                    <X size={18} />
+                </button>
             {:else}
-                <Settings size={18} />
+                <button class="nav-btn" on:click={goProfile} aria-label="Profile">
+                    <User size={18} />
+                </button>
+                <button class="nav-btn" on:click={goSettings} aria-label="Settings">
+                    <Settings size={18} />
+                </button>
             {/if}
-        </button>
+        </div>
 
         <slot />
 
@@ -43,16 +51,13 @@
         height: 100%;
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        user-select: none; /* Prevents highlighting text by accident */
+        user-select: none;
     }
 
     .window-wrapper {
         width: 100vw;
         height: 100vh;
-
-        /* 1. FIXED PADDING: Applies equal gap to Top and Bottom */
         padding: 12px;
-
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
@@ -67,21 +72,22 @@
         color: #ffffff;
         border-radius: 16px;
         overflow: hidden;
-
-        /* 2. CONSISTENT INTERNAL PADDING */
         padding: 1.5rem;
-
         box-sizing: border-box;
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     }
 
-    .nav-btn {
+    /* Container for top-right buttons */
+    .nav-actions {
         position: absolute;
-        /* 3. ALIGNMENT: Matches the padding of app-container (1.5rem) */
-        /* We subtract a little to center the icon vertically with the text */
         top: 1.25rem;
         right: 1.25rem;
+        display: flex;
+        gap: 0.5rem; /* Space between buttons */
+        z-index: 50;
+    }
 
+    .nav-btn {
         background: transparent;
         border: none;
         color: #666666;
@@ -90,7 +96,6 @@
         border-radius: 6px;
         display: flex;
         transition: all 0.2s ease;
-        z-index: 50;
     }
 
     .nav-btn:hover {

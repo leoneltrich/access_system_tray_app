@@ -1,36 +1,37 @@
 <script lang="ts">
-  // No logic needed for now
+  import { Plus } from 'lucide-svelte';
+
+  function openAddServerModal() {
+    console.log("Add Server Clicked");
+  }
 </script>
 
 <div class="view-content">
   <div class="view-header">
-    <h1 class="view-title">System Ready</h1>
+    <h2 class="view-title">Dashboard</h2>
   </div>
 
   <div class="view-body">
-    <p class="description">
-      Waiting for tray events...
-    </p>
-
-    <div class="card">
-      <h3>Quick Actions</h3>
-      <div class="actions">
-        <button>Restart</button>
-        <button>Logs</button>
-      </div>
+    <div class="empty-state">
     </div>
+  </div>
+
+  <div class="footer">
+    <button class="add-server-btn" on:click={openAddServerModal}>
+      <Plus size={18} />
+      <span>Add Server</span>
+    </button>
   </div>
 </div>
 
 <style>
-  /* 1. LAYOUT STRUCTURE */
+  /* --- LAYOUT --- */
   .view-content {
     display: flex;
     flex-direction: column;
     height: 100%;
   }
 
-  /* 2. HEADER */
   .view-header {
     height: 2rem;
     display: flex;
@@ -45,45 +46,46 @@
     line-height: 1;
   }
 
-  /* 3. BODY CONTENT */
   .view-body {
-    flex: 1; /* Allows this area to grow if needed */
-  }
-
-  .description {
-    color: #888;
-    margin: 0 0 1rem 0;
-    font-size: 0.9rem;
-  }
-
-  .card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 1rem;
-  }
-
-  .card h3 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.9rem;
-    color: #ccc;
-  }
-
-  .actions {
+    flex: 1;
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
   }
 
-  button {
-    background: #222;
-    border: 1px solid #333;
-    color: #ddd;
-    padding: 6px 12px;
-    border-radius: 6px;
+  /* --- FOOTER --- */
+  .footer {
+    margin-top: auto;
+  }
+
+  /* --- ADD SERVER BUTTON --- */
+  .add-server-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #ffffff;
+    color: #000000;
+    border: none;
+
+    /* CHANGED: Reduced from 12px to 10px to match Settings/Profile buttons */
+    padding: 10px;
+
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem; /* Matches other buttons */
     cursor: pointer;
-    font-size: 0.8rem;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
   }
 
-  button:hover { background: #333; }
+  .add-server-btn:hover {
+    background: #f0f0f0;
+    transform: translateY(-1px);
+  }
+
+  .add-server-btn:active {
+    transform: translateY(1px);
+    background: #e0e0e0;
+  }
 </style>
