@@ -1,31 +1,50 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { Plus, Trash2, RefreshCw, ShieldCheck, Loader2, AlertCircle } from 'lucide-svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { Plus, Trash2, ShieldCheck, Loader2, AlertCircle, Clock } from 'lucide-svelte';
   import { goto } from '$app/navigation';
   import {
     servers,
     loadServers,
     removeServer,
-    requestAccess
+    requestAccess,
+    syncAllStatuses
   } from '$lib/stores/servers';
 
-  // Track loading state for each server card independently
   let loadingStates: Record<string, boolean> = {};
-
-  // Track temporary errors to show on cards
   let errorStates: Record<string, string> = {};
+  let pollInterval: any;
 
-  onMount(() => {
-    loadServers();
+  onMount(async () => {
+    await loadServers();
+    syncAllStatuses();
+    pollInterval = setInterval(() => {
+      syncAllStatuses();
+    }, 5000);
+  });
+
+  onDestroy(() => {
+    if (pollInterval) clearInterval(pollInterval);
   });
 
   function goAddServer() {
     goto('/add-server');
   }
 
+  function formatTime(rawMinutes: string | number | null | undefined): string {
+    if (!rawMinutes) return '';
+    const totalMinutes = typeof rawMinutes === 'string' ? parseInt(rawMinutes, 10) : rawMinutes;
+    if (isNaN(totalMinutes)) return '';
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }
+
   async function handleGetAccess(id: string) {
     loadingStates[id] = true;
-    loadingStates = { ...loadingStates }; // Trigger reactivity
+    loadingStates = { ...loadingStates };
     errorStates[id] = "";
 
     try {
@@ -33,7 +52,6 @@
     } catch (err: any) {
       errorStates[id] = "Failed";
       console.error(err);
-
       setTimeout(() => {
         if(errorStates[id]) {
           delete errorStates[id];
@@ -44,10 +62,6 @@
       delete loadingStates[id];
       loadingStates = { ...loadingStates };
     }
-  }
-
-  function handleRefresh(id: string) {
-    handleGetAccess(id);
   }
 </script>
 
@@ -78,21 +92,31 @@
               </button>
             </div>
 
-            <div class="card-status">
+            <div class="card-status-area">
               {#if errorStates[server.id]}
                 <span class="error-text">
                   <AlertCircle size={12}/> Failed
                 </span>
               {:else}
-                <span class="status-dot" class:active={server.status === 'access-granted'}></span>
-                <span class="status-text">
-                  {server.status === 'access-granted' ? 'Access Granted' : 'No Access'}
-                </span>
+
+                <div class="status-row">
+                  <span class="status-dot" class:active={server.status === 'access-granted'}></span>
+                  <span class="status-text">
+                      {server.status === 'access-granted' ? 'Active' : 'No Access'}
+                    </span>
+                </div>
+
+                {#if server.status === 'access-granted' && server.timeRemaining}
+                  <div class="timer-badge">
+                    <Clock size={10} />
+                    <span>{formatTime(server.timeRemaining)}</span>
+                  </div>
+                {/if}
+
               {/if}
             </div>
 
             <div class="card-actions">
-
               <button
                       class="action-btn"
                       class:success={server.status === 'access-granted'}
@@ -104,22 +128,12 @@
                   <span>Verifying...</span>
                 {:else if server.status === 'access-granted'}
                   <ShieldCheck size={16} />
-                  <span>Active</span>
+                  <span>Extend</span>
                 {:else}
                   <ShieldCheck size={16} />
                   <span>Get Access</span>
                 {/if}
               </button>
-
-              <button
-                      class="icon-btn refresh"
-                      on:click={() => handleRefresh(server.id)}
-                      disabled={loadingStates[server.id] || server.status !== 'access-granted'}
-                      title="Extend Access"
-              >
-                <RefreshCw size={16} class={loadingStates[server.id] ? "spin" : ""} />
-              </button>
-
             </div>
           </div>
         {/each}
@@ -152,11 +166,7 @@
     flex-shrink: 0;
   }
 
-  .view-title {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
+  .view-title { margin: 0; font-size: 1.25rem; font-weight: 600; }
 
   .view-body {
     flex: 1;
@@ -166,7 +176,6 @@
   }
   .view-body::-webkit-scrollbar { display: none; }
 
-  /* --- EMPTY STATE --- */
   .empty-state {
     height: 100%;
     display: flex;
@@ -177,7 +186,6 @@
   }
   .hint { font-size: 0.8rem; color: #444; }
 
-  /* --- GRID SYSTEM --- */
   .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -196,18 +204,13 @@
     gap: 12px;
     transition: border-color 0.2s, background-color 0.2s;
   }
-
-  .card:hover {
-    border-color: #555;
-    background-color: #222;
-  }
+  .card:hover { border-color: #555; background-color: #222; }
 
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
-
   .server-name {
     font-weight: 600;
     font-size: 0.95rem;
@@ -216,13 +219,21 @@
     text-overflow: ellipsis;
   }
 
-  .card-status {
+  /* --- STATUS AREA --- */
+  .card-status-area {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: 40px;
+  }
+
+  .status-row {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
     color: #888;
-    height: 20px;
   }
 
   .status-dot {
@@ -230,16 +241,32 @@
     height: 8px;
     border-radius: 50%;
     background-color: #444;
+    flex-shrink: 0;
   }
   .status-dot.active { background-color: #10b981; }
+
+  /* TIMER TAG STYLE */
+  .timer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
 
   .error-text {
     color: #ef4444;
     display: flex;
     align-items: center;
     gap: 4px;
+    font-size: 0.8rem;
   }
 
+  /* --- ACTIONS --- */
   .card-actions {
     display: flex;
     gap: 8px;
@@ -247,7 +274,6 @@
     height: 32px;
   }
 
-  /* --- BUTTONS --- */
   .icon-btn {
     background: transparent;
     border: none;
@@ -263,16 +289,8 @@
   .icon-btn:hover { color: white; background: rgba(255,255,255,0.1); }
   .icon-btn.delete:hover { color: #ef4444; }
 
-  /* Disabled state for icon buttons */
-  .icon-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    background: transparent !important;
-    color: #666 !important;
-  }
-
   .action-btn {
-    flex: 1;
+    flex: 1; /* Spans full width now */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -296,11 +314,8 @@
   }
   .action-btn.success:hover { background: #059669; }
 
-  /* Footer & Layout */
-  .footer {
-    margin-top: 1rem;
-    flex-shrink: 0;
-  }
+  /* Footer */
+  .footer { margin-top: 1rem; flex-shrink: 0; }
 
   .add-server-btn {
     width: 100%;
