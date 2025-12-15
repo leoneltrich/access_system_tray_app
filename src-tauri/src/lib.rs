@@ -2,7 +2,10 @@ mod constants;
 mod tray;
 mod window;
 
-use tauri::{ActivationPolicy, Manager};
+use tauri::Manager;
+
+#[cfg(target_os = "macos")]
+use tauri::ActivationPolicy;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
