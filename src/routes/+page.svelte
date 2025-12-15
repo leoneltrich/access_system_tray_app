@@ -9,14 +9,16 @@
     requestAccess,
     syncAllStatuses
   } from '$lib/stores/servers';
+  import {loadSettings} from "$lib/stores/settings";
 
   let loadingStates: Record<string, boolean> = {};
   let errorStates: Record<string, string> = {};
   let pollInterval: any;
 
   onMount(async () => {
+    await loadSettings();
     await loadServers();
-    syncAllStatuses();
+    await syncAllStatuses();
     pollInterval = setInterval(() => {
       syncAllStatuses();
     }, 5000);
