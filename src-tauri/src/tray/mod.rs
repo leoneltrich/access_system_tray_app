@@ -1,8 +1,8 @@
 use tauri::{
-    tray::{TrayIconBuilder, TrayIconEvent, MouseButton},
-    Manager, Runtime, AppHandle,
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager, Runtime,
 };
-use tauri_plugin_positioner::{WindowExt, Position};
+use tauri_plugin_positioner::WindowExt;
 
 mod events;
 
@@ -26,23 +26,32 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                             events::handle_tray_click(tray.app_handle(), event);
                         }
 
-                        // --- WINDOWS LOGIC (Fixed) ---
+                        // --- WINDOWS LOGIC (With Delay Fix) ---
                         #[cfg(target_os = "windows")]
                         {
                             if win.is_visible().unwrap_or(false) {
-                                // If visible, hide it
+                                // If already open, close it immediately
                                 let _ = win.hide();
                             } else {
-                                // 1. Show the window FIRST so it can grab resources
-                                let _ = win.show();
+                                // CLONE the window handle to move it into the thread
+                                let win_clone = win.clone();
 
-                                // 2. Move it to the correct spot
-                                let _ = win.move_window(Position::BottomRight);
+                                // SPAWN a thread to wait 150ms
+                                thread::spawn(move || {
+                                    // 1. Wait for the Taskbar click event to "settle"
+                                    thread::sleep(Duration::from_millis(150));
 
-                                // 3. FORCE FOCUS
-                                // We re-apply always_on_top to force the OS to acknowledge it
-                                let _ = win.set_always_on_top(true);
-                                let _ = win.set_focus();
+                                    // 2. Now execute the logic
+                                    // Move to bottom right
+                                    let _ = win_clone.move_window(Position::BottomRight);
+
+                                    // Show
+                                    let _ = win_clone.show();
+
+                                    // Force Focus (This closes the Tray Overflow menu)
+                                    let _ = win_clone.set_focus();
+                                    let _ = win_clone.set_always_on_top(true);
+                                });
                             }
                         }
                     }
