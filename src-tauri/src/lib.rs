@@ -2,7 +2,7 @@ mod constants;
 mod tray;
 mod window;
 
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
@@ -54,6 +54,18 @@ pub fn run() {
 
             // Build the window
             let win = builder.build().expect("Failed to build window");
+
+            let win_clone = win.clone();
+            win.on_window_event(move |event| {
+                match event {
+                    WindowEvent::Focused(is_focused) => {
+                        if !is_focused {
+                            let _ = win_clone.hide();
+                        }
+                    }
+                    _ => {}
+                }
+            });
 
             // 4. Runtime Configurations
             // We set these here to be safe as they work on the window instance
