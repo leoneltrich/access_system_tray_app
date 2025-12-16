@@ -1,8 +1,10 @@
 use tauri::{
-    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, Runtime,
+    tray::{TrayIconBuilder, TrayIconEvent, MouseButton},
+    Manager, Runtime, AppHandle,
 };
-use tauri_plugin_positioner::WindowExt;
+use tauri_plugin_positioner::{WindowExt, Position};
+use std::thread;
+use std::time::Duration;
 
 mod events;
 
