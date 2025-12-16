@@ -1,7 +1,4 @@
-use tauri::{
-    tray::TrayIconBuilder,
-    AppHandle, Runtime,
-};
+use tauri::{tray::TrayIconBuilder, AppHandle, Runtime};
 // Removed unused "WindowExt" import
 
 mod events;

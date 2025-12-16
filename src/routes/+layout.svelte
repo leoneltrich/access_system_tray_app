@@ -1,25 +1,31 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { Settings, X, User } from 'lucide-svelte';
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
+    // Import the OS checker
+    import { type } from '@tauri-apps/plugin-os';
 
-    // Determine if we are on a "sub-page" (anything other than home)
     $: isSubPage = $page.url.pathname !== '/';
 
-    function goHome() {
-        goto('/');
-    }
+    // Default to false to prevent flash of transparency on Windows
+    let isMac = false;
 
-    function goSettings() {
-        goto('/settings');
-    }
+    onMount(async () => {
+        // Detect OS. If 'macos', we enable the floating transparent look.
+        const osType = await type();
+        if (osType === 'macos') {
+            isMac = true;
+        }
+    });
 
-    function goProfile() {
-        goto('/profile');
-    }
+    function goHome() { goto('/'); }
+    function goSettings() { goto('/settings'); }
+    function goProfile() { goto('/profile'); }
 </script>
 
-<div class="window-wrapper">
+<div class="window-wrapper" class:platform-mac={isMac}>
+
     <div class="app-container">
 
         <div class="nav-actions">
@@ -37,56 +43,93 @@
             {/if}
         </div>
 
-        <slot />
+        <div class="content-slot">
+            <slot />
+        </div>
 
     </div>
 </div>
 
 <style>
+    /* --- GLOBAL DEFAULTS (Windows Safe) --- */
     :global(html), :global(body) {
-        margin: 0 !important;
-        padding: 0 !important;
-        background: transparent !important;
+        margin: 0;
+        padding: 0;
         width: 100%;
         height: 100%;
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         user-select: none;
+
+        /* Default: Opaque Dark (Prevents glitches on Windows) */
+        background-color: #111111;
     }
 
+    /* --- LAYOUT WRAPPER --- */
     .window-wrapper {
         width: 100vw;
         height: 100vh;
-        padding: 12px;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
-        background: transparent !important;
+        padding: 0;
+        /* Ensure the wrapper itself doesn't have a background unless specified */
+        background-color: transparent;
     }
 
+    /* --- APP CONTAINER (The actual Card) --- */
     .app-container {
-        position: relative;
         flex: 1;
-        width: 100%;
-        background-color: #111111;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        background-color: #111111; /* The card keeps the dark color */
         color: #ffffff;
-        border-radius: 16px;
+        box-sizing: border-box;
+        overflow: hidden;
+        border-radius: 0;
+    }
+
+    .content-slot {
+        flex: 1;
         overflow: hidden;
         padding: 1.5rem;
-        box-sizing: border-box;
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     }
 
-    /* Container for top-right buttons */
+    /* ========================================= */
+    /* MAC-SPECIFIC OVERRIDES (THE FIX)          */
+    /* ========================================= */
+
+    /* FIX: We target HTML *and* BODY.
+       If the body contains the .platform-mac class, make everything behind it transparent.
+    */
+    :global(html:has(.platform-mac)),
+    :global(body:has(.platform-mac)) {
+        background: transparent !important; /* Double safety */
+    }
+
+    /* Add the floating padding back for Mac */
+    .window-wrapper.platform-mac {
+        padding: 12px;
+    }
+
+    /* Round the corners of the card */
+    .window-wrapper.platform-mac .app-container {
+        border-radius: 16px;
+        /* Optional: Add a border to separate it from the wallpaper better */
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* ... Keep your button styles below ... */
     .nav-actions {
         position: absolute;
         top: 1.25rem;
         right: 1.25rem;
         display: flex;
-        gap: 0.5rem; /* Space between buttons */
+        gap: 0.5rem;
         z-index: 50;
     }
-
     .nav-btn {
         background: transparent;
         border: none;
@@ -97,7 +140,6 @@
         display: flex;
         transition: all 0.2s ease;
     }
-
     .nav-btn:hover {
         color: #ffffff;
         background-color: rgba(255, 255, 255, 0.1);

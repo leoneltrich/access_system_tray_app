@@ -11,20 +11,6 @@
   },
   "app": {
     "macOSPrivateApi": true,
-    "windows": [
-      {
-        "title": "Tray App",
-        "label": "main",
-        "width": 300,
-        "height": 400,
-        "decorations": false,
-        "transparent": true,
-        "visible": false,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "visibleOnAllWorkspaces": true
-      }
-    ],
     "security": {
       "csp": null
     }
