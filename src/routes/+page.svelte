@@ -9,7 +9,9 @@
     requestAccess,
     syncAllStatuses
   } from '$lib/stores/servers';
-  import {loadSettings} from "$lib/stores/settings";
+  import { loadSettings } from "$lib/stores/settings";
+  // --- IMPORT THE HELPER ---
+  import { mapBackendError } from '$lib/utils';
 
   let loadingStates: Record<string, boolean> = {};
   let errorStates: Record<string, string> = {};
@@ -46,18 +48,30 @@
 
   async function handleGetAccess(id: string) {
     loadingStates[id] = true;
-    loadingStates = { ...loadingStates };
-    errorStates[id] = "";
+    loadingStates = { ...loadingStates }; // Trigger reactivity
+
+    // Clear previous error immediately on new click
+    if (errorStates[id]) {
+      const newErrors = { ...errorStates };
+      delete newErrors[id];
+      errorStates = newErrors;
+    }
 
     try {
       await requestAccess(id);
     } catch (err: any) {
-      errorStates[id] = "Failed";
       console.error(err);
+
+      // --- USE THE HELPER HERE ---
+      errorStates[id] = mapBackendError(err);
+      errorStates = { ...errorStates }; // Trigger reactivity
+
       setTimeout(() => {
+        // Only remove if it still exists (prevent race conditions)
         if(errorStates[id]) {
-          delete errorStates[id];
-          errorStates = {...errorStates};
+          const newErrors = {...errorStates};
+          delete newErrors[id];
+          errorStates = newErrors;
         }
       }, 3000);
     } finally {
@@ -97,7 +111,7 @@
             <div class="card-status-area">
               {#if errorStates[server.id]}
                 <span class="error-text">
-                  <AlertCircle size={12}/> Backend access failed
+                  <AlertCircle size={12}/> {errorStates[server.id]}
                 </span>
               {:else}
 
@@ -266,6 +280,13 @@
     align-items: center;
     gap: 4px;
     font-size: 0.8rem;
+    /* Added animation so user sees the change */
+    animation: fadeIn 0.2s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* --- ACTIONS --- */
@@ -292,7 +313,7 @@
   .icon-btn.delete:hover { color: #ef4444; }
 
   .action-btn {
-    flex: 1; /* Spans full width now */
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;

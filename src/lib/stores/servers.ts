@@ -18,13 +18,37 @@ interface AccessStatusResponse {
 
 export interface ServerCard {
     id: string;
-    status: 'idle' | 'access-granted' | 'offline';
-    timeRemaining?: string | null; // NEW: Holds "2h 30m" etc.
+    status: 'idle' | 'access-granted' | 'offline' | 'error'; // Added 'error' for clearer UI states
+    timeRemaining?: string | null;
 }
 
 // --- STATE ---
 export const servers = writable<ServerCard[]>([]);
+// serverError can be removed if you handle errors locally in the UI,
+// but we keep it if you use it for global alerts.
 export const serverError = writable<string>("");
+
+// --- HELPERS ---
+
+/**
+ * Centralized error thrower based on HTTP status
+ */
+async function handleResponseError(response: Response) {
+    if (response.ok) return; // Should not be called if OK
+
+    // You can also parse the body if your backend sends JSON error details:
+    // const body = await response.json().catch(() => null);
+
+    switch (response.status) {
+        case 401: throw new Error("ERR_AUTH"); // Unauthorized
+        case 403: throw new Error("ERR_FORBIDDEN"); // Access Denied
+        case 404: throw new Error("ERR_NOT_FOUND"); // Server Deleted/Missing
+        case 500: throw new Error("ERR_SERVER"); // Internal Error
+        case 502:
+        case 503: throw new Error("ERR_OFFLINE"); // Gateway/Service unavailable
+        default: throw new Error(`ERR_UNKNOWN:${response.status}`);
+    }
+}
 
 // --- ACTIONS ---
 
@@ -32,6 +56,9 @@ export async function loadServers() {
     try {
         const stored = await db.get<ServerCard[]>(KEY_SAVED_SERVERS);
         if (stored) {
+            // OPTIONAL: On load, mark all as 'idle' or 'offline' initially
+            // instead of trusting the stale 'access-granted' state from disk?
+            // For now, we trust disk, but polling will correct it quickly.
             servers.set(stored);
         }
     } catch (err) {
@@ -41,13 +68,23 @@ export async function loadServers() {
 
 /**
  * Checks a SINGLE server's status and updates the store.
- * Silent: Doesn't throw errors to the UI, just logs them.
+ * NOW HANDLES OFFLINE/STALE STATES CORRECTLY.
  */
 export async function checkServerStatus(serverName: string) {
     const token = await db.get<string>(KEY_JWT);
-    if (!token) return;
+    // If no token, we can't really check status, but we shouldn't show 'access-granted'
+    if (!token) {
+        updateServerStatus(serverName, 'idle');
+        return;
+    }
 
     const baseUrl = get(serverUrl);
+    // Safety check: if no URL, can't check
+    if (!baseUrl) {
+        updateServerStatus(serverName, 'offline');
+        return;
+    }
+
     const cleanUrl = baseUrl.replace(/\/$/, "");
 
     try {
@@ -60,38 +97,40 @@ export async function checkServerStatus(serverName: string) {
         });
 
         if (response.status === 401) {
+            // Token expired. We effectively have no access.
+            // You might want to trigger a logout flow here eventually.
             console.warn("Token expired during polling");
+            updateServerStatus(serverName, 'idle');
             return;
         }
 
         if (!response.ok) {
-            // If 404 or other error, we might assume 'offline' or just keep current state
-            // For now, let's strictly handle connectivity issues vs logical issues
+            // If the server returns 404/500, we consider the connection "alive" but the server specific status "error"
+            // For simplicity, we fallback to 'idle' or 'error' so the user sees they aren't connected.
+            updateServerStatus(serverName, 'idle'); // Or 'error' if you want a red badge
             return;
         }
 
         const data: AccessStatusResponse = await response.json();
 
-        // Update the store based on real data
-        servers.update(list => {
-            const updated = list.map(s => {
-                if (s.id === serverName) {
-                    return {
-                        ...s,
-                        // If active -> granted, else -> idle
-                        status: data.is_active ? ('access-granted' as const) : ('idle' as const),
-                        timeRemaining: data.time_remaining
-                    };
-                }
-                return s;
-            });
-            // We don't save to disk on every poll to avoid IO thrashing,
-            // but you could if persistence of exact seconds matters.
-            return updated;
-        });
+        // SUCCESS: Update with real data
+        servers.update(list => list.map(s => {
+            if (s.id === serverName) {
+                return {
+                    ...s,
+                    status: data.is_active ? 'access-granted' : 'idle',
+                    timeRemaining: data.time_remaining
+                };
+            }
+            return s;
+        }));
 
     } catch (err) {
-        console.error(`Failed to check status for ${serverName}`, err);
+        console.error(`Failed to check status for ${serverName}:`, err);
+        // CRITICAL FIX: If fetch throws (Network Error), MARK AS OFFLINE.
+        // This ensures the UI updates to show the backend is down,
+        // removing the stale "Active" green dot.
+        updateServerStatus(serverName, 'offline');
     }
 }
 
@@ -100,20 +139,19 @@ export async function checkServerStatus(serverName: string) {
  */
 export async function syncAllStatuses() {
     const currentList = get(servers);
-    // Execute all checks in parallel
     await Promise.all(currentList.map(s => checkServerStatus(s.id)));
 }
 
-// ... (Rest of your existing addServer, requestAccess, removeServer functions stay the same) ...
-
 export async function addServer(serverName: string) {
-    // ... (Keep existing code) ...
-    // Note: Copied from previous step, ensure this function exists here
+    // Reset any global error
     serverError.set("");
+
     const currentList = get(servers);
-    if (currentList.some(s => s.id === serverName)) throw new Error("Server already added.");
+    if (currentList.some(s => s.id === serverName)) throw new Error("ERR_DUPLICATE");
+
     const token = await db.get<string>(KEY_JWT);
-    if (!token) throw new Error("You must be logged in.");
+    if (!token) throw new Error("ERR_AUTH");
+
     const baseUrl = get(serverUrl);
     const cleanUrl = baseUrl.replace(/\/$/, "");
 
@@ -122,9 +160,11 @@ export async function addServer(serverName: string) {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
-        if (!response.ok) throw new Error("Server check failed.");
+
+        await handleResponseError(response); // Will throw specific codes if not OK
+
         const data = await response.json();
-        if (!data.exists) throw new Error("Server does not exist.");
+        if (!data.exists) throw new Error("ERR_NOT_FOUND");
 
         const newServer: ServerCard = { id: serverName, status: 'idle' };
         servers.update(list => {
@@ -133,14 +173,17 @@ export async function addServer(serverName: string) {
             return updated;
         });
     } catch (err: any) {
-        throw new Error(err.message);
+        // If it's already one of our codes, rethrow. If it's a fetch error, map to network.
+        const msg = err.message || "";
+        if (msg.startsWith("ERR_")) throw err;
+        throw new Error("ERR_NETWORK");
     }
 }
 
 export async function requestAccess(serverName: string) {
-    // ... (Keep existing code) ...
     const token = await db.get<string>(KEY_JWT);
-    if (!token) throw new Error("You must be logged in.");
+    if (!token) throw new Error("ERR_AUTH");
+
     const baseUrl = get(serverUrl);
     const cleanUrl = baseUrl.replace(/\/$/, "");
 
@@ -150,22 +193,22 @@ export async function requestAccess(serverName: string) {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ server_id: serverName })
         });
-        if (!response.ok) throw new Error("Request failed.");
+
+        // --- THE FIX ---
+        // Instead of generic "Request Failed", we check codes
+        await handleResponseError(response);
 
         // Optimistic update
-        servers.update(list => {
-            const updated = list.map(s =>
-                s.id === serverName ? { ...s, status: 'access-granted' as const } : s
-            );
-            saveToDisk(updated);
-            return updated;
-        });
+        updateServerStatus(serverName, 'access-granted');
 
-        // Immediately fetch accurate time remaining
+        // Immediately fetch accurate time remaining to sync up
         await checkServerStatus(serverName);
 
     } catch (err: any) {
-        throw err;
+        // Map native fetch errors (like "Failed to fetch") to our code
+        const msg = err.message || "";
+        if (msg.startsWith("ERR_")) throw err; // Already formatted
+        throw new Error("ERR_NETWORK"); // Network/Connection refused
     }
 }
 
@@ -173,6 +216,18 @@ export async function removeServer(serverName: string) {
     servers.update(list => {
         const updated = list.filter(s => s.id !== serverName);
         saveToDisk(updated);
+        return updated;
+    });
+}
+
+// --- INTERNAL HELPERS ---
+
+function updateServerStatus(id: string, status: ServerCard['status'], timeRemaining?: string | null) {
+    servers.update(list => {
+        const updated = list.map(s =>
+            s.id === id ? { ...s, status, timeRemaining: timeRemaining ?? s.timeRemaining } : s
+        );
+        // We don't save to disk on status updates to save IO, only on add/remove
         return updated;
     });
 }

@@ -1,33 +1,19 @@
-// $lib/utils/errorMapper.ts or inside your store
 export function mapBackendError(error: any): string {
-    const errString = String(error).toLowerCase();
+    // 1. Get the message string
+    const code = error?.message || String(error);
 
-    // 1. Backend Unreachable / Network Errors
-    if (
-        errString.includes('connection refused') ||
-        errString.includes('network error') ||
-        errString.includes('failed to fetch') ||
-        errString.includes('timeout')
-    ) {
-        return "Backend Offline";
+    // 2. Map standard codes
+    switch (code) {
+        case 'ERR_AUTH':        return "Please Log In";
+        case 'ERR_FORBIDDEN':   return "Access Denied";
+        case 'ERR_NOT_FOUND':   return "Server Not Found";
+        case 'ERR_DUPLICATE':   return "Already Exists";
+        case 'ERR_NETWORK':     return "Backend Offline";
+        case 'ERR_OFFLINE':     return "Backend Offline";
+        case 'ERR_SERVER':      return "Server Error";
+        case 'ERR_UNKNOWN':     return "Unknown Error";
     }
 
-    // 2. Unauthorized (401)
-    if (errString.includes('401') || errString.includes('unauthorized')) {
-        return "Please Log In";
-    }
-
-    // 3. Forbidden (403)
-    if (errString.includes('403') || errString.includes('forbidden')) {
-        return "Access Denied";
-    }
-
-    // 4. Not Found (404)
-    if (errString.includes('404') || errString.includes('not found')) {
-        return "Server Deleted";
-    }
-
-    // 5. Generic / Unknown
-    // truncate if too long to fit in a label
+    // 3. Fallback for unexpected errors
     return "Request Failed";
 }
