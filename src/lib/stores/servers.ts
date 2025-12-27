@@ -56,10 +56,13 @@ export async function loadServers() {
     try {
         const stored = await db.get<ServerCard[]>(KEY_SAVED_SERVERS);
         if (stored) {
-            // OPTIONAL: On load, mark all as 'idle' or 'offline' initially
-            // instead of trusting the stale 'access-granted' state from disk?
-            // For now, we trust disk, but polling will correct it quickly.
-            servers.set(stored);
+            const safeList = stored.map(s => ({
+                ...s,
+                status: 'idle' as const, // Always start neutral
+                timeRemaining: null      // Clear stale timers
+            }));
+
+            servers.set(safeList);
         }
     } catch (err) {
         console.error("Failed to load servers:", err);

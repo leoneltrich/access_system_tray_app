@@ -1,6 +1,4 @@
 use crate::constants::MAIN_WINDOW_LABEL;
-use std::thread;
-use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
