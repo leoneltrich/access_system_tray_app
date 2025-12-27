@@ -34,11 +34,9 @@
 
     async function toggleAutoStart() {
         if (autoStartProcessing) return;
-
         const previousState = autoStartActive;
         autoStartActive = !autoStartActive;
         autoStartProcessing = true;
-
         try {
             previousState ? await disable() : await enable();
         } catch (error) {
@@ -49,32 +47,24 @@
         }
     }
 
-    async function handleSave() {
+    async function handleSave(event?: Event) {
+        // Prevent default form submission (page reload)
+        if (event) event.preventDefault();
+
         if (isSaving) return;
 
         isSaving = true;
         saveStatus = 'checking';
-        statusMessage = ""; // Clear previous messages
+        statusMessage = "";
 
         try {
             await updateServerUrl(inputUrl);
-
             saveStatus = 'success';
             statusMessage = "Settings saved successfully";
-
-            // Reset to idle so the user sees the normal "Save" button again shortly
-            setTimeout(() => {
-                saveStatus = 'idle';
-                statusMessage = "";
-            }, 3000);
-
+            setTimeout(() => { saveStatus = 'idle'; statusMessage = ""; }, 3000);
         } catch (err: any) {
-            // Distinguish between bad input vs network error
             saveStatus = err.message.includes("http") ? 'invalid' : 'error';
             statusMessage = err.message;
-
-            // Allow the user to try again faster on error (2s delay)
-            setTimeout(() => { saveStatus = 'idle'; }, 2000);
         } finally {
             isSaving = false;
         }
@@ -93,7 +83,6 @@
                     <span class="label-text">Run on Startup</span>
                     <span class="subtitle">Launch automatically when you log in</span>
                 </div>
-
                 <Toggle
                         checked={autoStartActive}
                         isLoading={autoStartProcessing}
@@ -105,57 +94,63 @@
 
         <hr class="divider" />
 
-        <div class="form-group">
-            <label for="server-url">Server URL</label>
-            {#if !$isSettingsLoaded}
-                <div class="skeleton-input"></div>
-            {:else}
-                <input
-                        id="server-url"
-                        type="text"
-                        bind:value={inputUrl}
-                        spellcheck="false"
-                        placeholder="https://..."
-                        class:input-error={saveStatus === 'invalid' || saveStatus === 'error'}
-                />
-            {/if}
+        <form class="settings-form" onsubmit={handleSave}>
+            <div class="form-group">
+                <label for="server-url">Server URL</label>
 
-            {#if statusMessage}
-                <p class:success-msg={saveStatus === 'success'} class:error-msg={saveStatus !== 'success'}>
-                    {statusMessage}
-                </p>
-            {/if}
-        </div>
-
-        <div class="footer">
-            <button
-                    class="save-btn"
-                    class:success={saveStatus === 'success'}
-                    class:error={saveStatus === 'invalid' || saveStatus === 'error'}
-                    class:checking={saveStatus === 'checking'}
-                    disabled={isSaving || !$isSettingsLoaded}
-                    onclick={handleSave}
-            >
-                {#if saveStatus === 'checking'} Verifying...
-                {:else if saveStatus === 'success'} Saved!
-                {:else if saveStatus === 'invalid'} Invalid URL
-                {:else if saveStatus === 'error'} Connection Failed
-                {:else} Save Changes
+                {#if !$isSettingsLoaded}
+                    <div class="skeleton-input"></div>
+                {:else}
+                    <input
+                            id="server-url"
+                            type="text"
+                            bind:value={inputUrl}
+                            spellcheck="false"
+                            placeholder="https://..."
+                            autocomplete="url"
+                            class:input-error={saveStatus === 'invalid' || saveStatus === 'error'}
+                    />
                 {/if}
-            </button>
-        </div>
+
+                {#if statusMessage}
+                    <p class:success-msg={saveStatus === 'success'} class:error-msg={saveStatus !== 'success'} role="alert">
+                        {statusMessage}
+                    </p>
+                {/if}
+            </div>
+
+            <div class="footer">
+                <button
+                        type="submit"
+                        class="save-btn"
+                        class:success={saveStatus === 'success'}
+                        class:error={saveStatus === 'invalid' || saveStatus === 'error'}
+                        class:checking={saveStatus === 'checking'}
+                        disabled={isSaving || !$isSettingsLoaded}
+                >
+                    {#if saveStatus === 'checking'} Verifying...
+                    {:else if saveStatus === 'success'} Saved!
+                    {:else if saveStatus === 'invalid'} Invalid URL
+                    {:else if saveStatus === 'error'} Connection Failed
+                    {:else} Save Changes
+                    {/if}
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <style>
-    /* ... Previous Layout Styles ... */
     .view-content { display: flex; flex-direction: column; height: 100%; color: white; }
     .view-header { height: 2rem; display: flex; align-items: center; margin-bottom: 1.5rem; }
     .view-title { margin: 0; font-size: 1.25rem; font-weight: 600; line-height: 1; }
     .view-body { flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
 
-    .option-row { display: flex; justify-content: space-between; align-items: center; min-height: 30px; }
-    .option-text { display: flex; flex-direction: column; gap: 4px; padding-right: 1rem; }
+    /* Layout for the form to fill remaining space */
+    .settings-form { display: flex; flex-direction: column; flex: 1; }
+
+    .option-row { display: flex; justify-content: space-between; align-items: center; min-height: 30px; gap: 0.5rem}
+    .option-text { display: flex; flex-direction: column; gap: 4px; }
     .label-text { font-size: 0.9rem; font-weight: 500; }
     .subtitle { font-size: 0.75rem; color: #888; }
     .divider { border: none; height: 1px; background: rgba(255, 255, 255, 0.1); margin: 0; }
@@ -169,16 +164,16 @@
 
     .skeleton-input { height: 40px; background: rgba(255,255,255,0.05); border-radius: 8px; animation: pulse 1.5s infinite; }
 
-    /* FIXED: Specific colors for messages */
     .error-msg { color: #ef4444; font-size: 0.8rem; margin: 0 0 0 2px; animation: fadeIn 0.3s ease; }
     .success-msg { color: #10b981; font-size: 0.8rem; margin: 0 0 0 2px; animation: fadeIn 0.3s ease; }
 
+    /* Footer pushes to bottom inside the flex form */
     .footer { margin-top: auto; }
+
     .save-btn { width: 100%; background: #ffffff; color: #000000; border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; }
     .save-btn:hover { opacity: 0.9; }
     .save-btn:disabled { opacity: 0.7; cursor: wait; }
 
-    /* State Colors */
     .save-btn.checking { background-color: #f59e0b; color: white; }
     .save-btn.success { background-color: #10b981; color: white; }
     .save-btn.error { background-color: #ef4444; color: white; }
