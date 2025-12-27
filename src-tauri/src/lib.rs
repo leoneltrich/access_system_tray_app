@@ -7,6 +7,7 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use crate::constants::MAIN_WINDOW_LABEL;
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
+use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +17,10 @@ pub fn run() {
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec![]) // No extra arguments passed on startup
+        ))
         .setup(|app| {
             let handle = app.handle();
 

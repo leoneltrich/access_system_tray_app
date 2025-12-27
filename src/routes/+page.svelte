@@ -97,7 +97,7 @@
             <div class="card-status-area">
               {#if errorStates[server.id]}
                 <span class="error-text">
-                  <AlertCircle size={12}/> Failed
+                  <AlertCircle size={12}/> Backend access failed
                 </span>
               {:else}
 

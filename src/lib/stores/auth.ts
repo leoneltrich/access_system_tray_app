@@ -115,7 +115,7 @@ export async function login(username: string, pass: string) {
 
     } catch (err: any) {
         console.error("Login failed:", err);
-        authError.set(err.message || "Connection failed");
+        authError.set(err.message || "Connection to backend failed");
     } finally {
         authLoading.set(false);
     }
