@@ -1,6 +1,7 @@
 <script lang="ts">
     import { addServer } from '$lib/stores/servers';
     import { goto } from '$app/navigation';
+    import { mapBackendError } from '$lib/utils'; // <--- 1. Import the mapper
     import { AlertCircle } from 'lucide-svelte';
 
     let serverId = "";
@@ -17,7 +18,8 @@
             await addServer(serverId.trim());
             goto('/');
         } catch (err: any) {
-            errorMsg = err.message;
+            // <--- 2. Use the mapper to convert "ERR_AUTH" to "Please Log In"
+            errorMsg = mapBackendError(err);
         } finally {
             isLoading = false;
         }
