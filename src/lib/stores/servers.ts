@@ -1,4 +1,3 @@
-// src/lib/stores/servers.ts
 import { writable, get } from 'svelte/store';
 import { db } from './app-db';
 import { api } from '$lib/services/api';
@@ -29,7 +28,6 @@ export async function loadServers() {
     try {
         const stored = await db.get<ServerCard[]>(KEY_SAVED_SERVERS);
         if (stored) {
-            // Reset status on load to prevent stale UI
             const safeList = stored.map(s => ({
                 ...s,
                 status: 'idle' as const,
@@ -52,10 +50,8 @@ export async function checkServerStatus(serverName: string) {
         });
 
     } catch (err: any) {
-        // Specific handling for status checks:
-        // If Auth fails (401), we are idle (not authed).
-        // If Network fails (ERR_NETWORK/ERR_OFFLINE), we are offline.
-
+        // This try/catch IS necessary because we consume the error
+        // to update state (offline/idle) instead of throwing it.
         const msg = err.message || "";
 
         if (msg === "ERR_AUTH") {
@@ -64,7 +60,6 @@ export async function checkServerStatus(serverName: string) {
         } else if (msg === "ERR_NETWORK" || msg === "ERR_OFFLINE") {
             updateServerState(serverName, { status: 'offline' });
         } else {
-            // 404 or 500 etc -> treat as idle/disconnected for now
             updateServerState(serverName, { status: 'idle' });
         }
     }
@@ -72,7 +67,6 @@ export async function checkServerStatus(serverName: string) {
 
 export async function syncAllStatuses() {
     const currentList = get(servers);
-    // Parallel execution for speed
     await Promise.all(currentList.map(s => checkServerStatus(s.id)));
 }
 
@@ -80,15 +74,14 @@ export async function addServer(serverName: string) {
     const currentList = get(servers);
     if (currentList.some(s => s.id === serverName)) throw new Error("ERR_DUPLICATE");
 
-    // 1. Check if server exists via API
-    try {
-        const data = await api.get<{ exists: boolean }>(`/users/servers/${serverName}/exists`);
-        if (!data.exists) throw new Error("ERR_NOT_FOUND");
-    } catch (err) {
-        throw err; // Re-throw to UI
-    }
+    // No try/catch needed here.
+    // If api.get fails, the error bubbles up.
+    // If !data.exists, we throw manually, which also bubbles up.
+    const data = await api.get<{ exists: boolean }>(`/users/servers/${serverName}/exists`);
 
-    // 2. Add to local state
+    if (!data.exists) throw new Error("ERR_NOT_FOUND");
+
+    // Add to local state
     const newServer: ServerCard = { id: serverName, status: 'idle' };
 
     servers.update(list => {
@@ -99,18 +92,15 @@ export async function addServer(serverName: string) {
 }
 
 export async function requestAccess(serverName: string) {
-    try {
-        await api.post('/users/access', { server_id: serverName });
+    // No try/catch needed.
+    // If api.post fails, execution stops and the error goes to the UI.
+    await api.post('/users/access', { server_id: serverName });
 
-        // Optimistic update
-        updateServerState(serverName, { status: 'access-granted' });
+    // Optimistic update
+    updateServerState(serverName, { status: 'access-granted' });
 
-        // Fetch accurate time immediately
-        await checkServerStatus(serverName);
-
-    } catch (err) {
-        throw err; // UI handles the alert
-    }
+    // Fetch accurate time immediately
+    await checkServerStatus(serverName);
 }
 
 export async function removeServer(serverName: string) {
