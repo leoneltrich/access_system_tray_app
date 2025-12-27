@@ -1,10 +1,11 @@
-use tauri::{
-    tray::{TrayIconBuilder, TrayIconEvent, MouseButton},
-    Manager, Runtime, AppHandle,
-};
-use tauri_plugin_positioner::{WindowExt, Position};
+use crate::constants::MAIN_WINDOW_LABEL;
 use std::thread;
 use std::time::Duration;
+use tauri::{
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager, Runtime,
+};
+use tauri_plugin_positioner::{Position, WindowExt};
 
 mod events;
 
@@ -15,7 +16,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .icon(icon)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
-            if let Some(win) = tray.app_handle().get_webview_window("main") {
+            if let Some(win) = tray.app_handle().get_webview_window(MAIN_WINDOW_LABEL) {
                 match event {
                     TrayIconEvent::Click {
                         button: MouseButton::Left,

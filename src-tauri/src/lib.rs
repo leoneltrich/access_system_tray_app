@@ -4,12 +4,14 @@ mod window;
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
+use crate::constants::MAIN_WINDOW_LABEL;
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -30,14 +32,15 @@ pub fn run() {
 
             // 3. CREATE WINDOW PROGRAMMATICALLY
             // This replaces the "windows" block in tauri.conf.json
-            let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-                .title("Tray App")
-                .inner_size(300.0, 400.0)
-                .decorations(false)
-                .visible(false) // Start hidden (like your config)
-                .skip_taskbar(true)
-                .always_on_top(true)
-                .shadow(true);
+            let mut builder =
+                WebviewWindowBuilder::new(app, MAIN_WINDOW_LABEL, WebviewUrl::default())
+                    .title("Tray App")
+                    .inner_size(300.0, 400.0)
+                    .decorations(false)
+                    .visible(false) // Start hidden (like your config)
+                    .skip_taskbar(true)
+                    .always_on_top(true)
+                    .shadow(true);
 
             // CONDITIONAL TRANSPARENCY
             // macOS: Transparent (allows floating rounded corners via CSS)
@@ -56,15 +59,13 @@ pub fn run() {
             let win = builder.build().expect("Failed to build window");
 
             let win_clone = win.clone();
-            win.on_window_event(move |event| {
-                match event {
-                    WindowEvent::Focused(is_focused) => {
-                        if !is_focused {
-                            let _ = win_clone.hide();
-                        }
+            win.on_window_event(move |event| match event {
+                WindowEvent::Focused(is_focused) => {
+                    if !is_focused {
+                        let _ = win_clone.hide();
                     }
-                    _ => {}
                 }
+                _ => {}
             });
 
             // 4. Runtime Configurations
