@@ -2,25 +2,20 @@
     import { onMount } from 'svelte';
     import { Settings, X, User } from 'lucide-svelte';
     import { goto } from '$app/navigation';
-    // FIX 1: Use new state-based page object instead of store
     import { page } from '$app/state';
     import { type } from '@tauri-apps/plugin-os';
     import { initAuth } from '$lib/stores/auth';
 
-    // FIX 2: Accept 'children' prop (replaces <slot>)
     let { children } = $props();
 
     let isMac = $state(false);
 
-    // FIX 3: Derived state using new 'page' object (no '$' needed)
     let isSubPage = $derived(page.url.pathname !== '/');
 
     onMount(async () => {
-        // FIX 4: Added await
         await initAuth();
 
         try {
-            // FIX 5: Removed await (Tauri v2 type() is synchronous)
             const osType = type();
             if (osType === 'macos') {
                 isMac = true;
