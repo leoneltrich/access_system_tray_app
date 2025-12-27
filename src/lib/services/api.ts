@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import { fetch } from '@tauri-apps/plugin-http';
 import { db } from '$lib/stores/app-db';
-import { serverUrl } from '$lib/stores/settings';
+import { serverUrl } from '$lib/stores/config';
 
 const KEY_JWT = 'auth_token';
 
@@ -52,6 +52,27 @@ class ApiService {
             case 502:
             case 503: throw new Error("ERR_OFFLINE");
             default: throw new Error(`ERR_UNKNOWN:${response.status}`);
+        }
+    }
+
+    async checkConnection(baseUrl: string): Promise<boolean> {
+        const cleanBase = baseUrl.replace(/\/$/, "");
+        const url = `${cleanBase}/health`;
+
+        // We use a shorter timeout for health checks
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch (err) {
+            clearTimeout(timeoutId);
+            throw err; // Let the caller handle the specific error message
         }
     }
 
