@@ -1,20 +1,16 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { Plus, Trash2, ShieldCheck, Loader2, AlertCircle, Clock } from 'lucide-svelte';
+  import { Plus } from 'lucide-svelte';
   import { goto } from '$app/navigation';
   import {
     servers,
     loadServers,
     removeServer,
-    requestAccess,
     syncAllStatuses
   } from '$lib/stores/servers';
   import { loadSettings } from "$lib/stores/settings";
-  // --- IMPORT THE HELPER ---
-  import { mapBackendError } from '$lib/utils';
+  import ServerCard from '$lib/components/dashboard/ServerCard.svelte';
 
-  let loadingStates: Record<string, boolean> = {};
-  let errorStates: Record<string, string> = {};
   let pollInterval: any;
 
   onMount(async () => {
@@ -33,52 +29,6 @@
   function goAddServer() {
     goto('/add-server');
   }
-
-  function formatTime(rawMinutes: string | number | null | undefined): string {
-    if (!rawMinutes) return '';
-    const totalMinutes = typeof rawMinutes === 'string' ? parseInt(rawMinutes, 10) : rawMinutes;
-    if (isNaN(totalMinutes)) return '';
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  }
-
-  async function handleGetAccess(id: string) {
-    loadingStates[id] = true;
-    loadingStates = { ...loadingStates }; // Trigger reactivity
-
-    // Clear previous error immediately on new click
-    if (errorStates[id]) {
-      const newErrors = { ...errorStates };
-      delete newErrors[id];
-      errorStates = newErrors;
-    }
-
-    try {
-      await requestAccess(id);
-    } catch (err: any) {
-      console.error(err);
-
-      // --- USE THE HELPER HERE ---
-      errorStates[id] = mapBackendError(err);
-      errorStates = { ...errorStates }; // Trigger reactivity
-
-      setTimeout(() => {
-        // Only remove if it still exists (prevent race conditions)
-        if(errorStates[id]) {
-          const newErrors = {...errorStates};
-          delete newErrors[id];
-          errorStates = newErrors;
-        }
-      }, 3000);
-    } finally {
-      delete loadingStates[id];
-      loadingStates = { ...loadingStates };
-    }
-  }
 </script>
 
 <div class="view-content">
@@ -95,70 +45,17 @@
     {:else}
       <div class="grid-container">
         {#each $servers as server (server.id)}
-          <div class="card">
-
-            <div class="card-header">
-              <span class="server-name">{server.id}</span>
-              <button
-                      class="icon-btn delete"
-                      title="Remove Server"
-                      on:click={() => removeServer(server.id)}
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-
-            <div class="card-status-area">
-              {#if errorStates[server.id]}
-                <span class="error-text">
-                  <AlertCircle size={12}/> {errorStates[server.id]}
-                </span>
-              {:else}
-
-                <div class="status-row">
-                  <span class="status-dot" class:active={server.status === 'access-granted'}></span>
-                  <span class="status-text">
-                      {server.status === 'access-granted' ? 'Active' : 'No Access'}
-                    </span>
-                </div>
-
-                {#if server.status === 'access-granted' && server.timeRemaining}
-                  <div class="timer-badge">
-                    <Clock size={10} />
-                    <span>{formatTime(server.timeRemaining)}</span>
-                  </div>
-                {/if}
-
-              {/if}
-            </div>
-
-            <div class="card-actions">
-              <button
-                      class="action-btn"
-                      class:success={server.status === 'access-granted'}
-                      on:click={() => handleGetAccess(server.id)}
-                      disabled={loadingStates[server.id]}
-              >
-                {#if loadingStates[server.id]}
-                  <div class="spin"><Loader2 size={16} /></div>
-                  <span>Verifying...</span>
-                {:else if server.status === 'access-granted'}
-                  <ShieldCheck size={16} />
-                  <span>Extend</span>
-                {:else}
-                  <ShieldCheck size={16} />
-                  <span>Get Access</span>
-                {/if}
-              </button>
-            </div>
-          </div>
+          <ServerCard
+                  {server}
+                  ondelete={() => removeServer(server.id)}
+          />
         {/each}
       </div>
     {/if}
   </div>
 
   <div class="footer">
-    <button class="add-server-btn" on:click={goAddServer}>
+    <button class="add-server-btn" onclick={goAddServer}>
       <Plus size={18} />
       <span>Add Server</span>
     </button>
@@ -166,7 +63,7 @@
 </div>
 
 <style>
-  /* --- LAYOUT --- */
+  /* --- EXACT SAME CSS AS BEFORE --- */
   .view-content {
     display: flex;
     flex-direction: column;
@@ -209,135 +106,6 @@
     padding-bottom: 1rem;
   }
 
-  /* --- CARD --- */
-  .card {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    transition: border-color 0.2s, background-color 0.2s;
-  }
-  .card:hover { border-color: #555; background-color: #222; }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .server-name {
-    font-weight: 600;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* --- STATUS AREA --- */
-  .card-status-area {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    min-height: 40px;
-  }
-
-  .status-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
-    color: #888;
-  }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #444;
-    flex-shrink: 0;
-  }
-  .status-dot.active { background-color: #10b981; }
-
-  /* TIMER TAG STYLE */
-  .timer-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .error-text {
-    color: #ef4444;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.8rem;
-    /* Added animation so user sees the change */
-    animation: fadeIn 0.2s ease-in-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-2px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* --- ACTIONS --- */
-  .card-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: auto;
-    height: 32px;
-  }
-
-  .icon-btn {
-    background: transparent;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .icon-btn:hover { color: white; background: rgba(255,255,255,0.1); }
-  .icon-btn.delete:hover { color: #ef4444; }
-
-  .action-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: #333;
-    border: none;
-    color: white;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .action-btn:hover { background: #444; }
-  .action-btn:disabled { opacity: 0.7; cursor: wait; }
-
-  .action-btn.success {
-    background: #10b981;
-    color: black;
-    font-weight: 600;
-  }
-  .action-btn.success:hover { background: #059669; }
-
-  /* Footer */
   .footer { margin-top: 1rem; flex-shrink: 0; }
 
   .add-server-btn {
@@ -357,10 +125,4 @@
     transition: all 0.2s ease;
   }
   .add-server-btn:hover { background: #f0f0f0; }
-
-  .spin {
-    animation: spin 1s linear infinite;
-    display: flex;
-  }
-  @keyframes spin { 100% { transform: rotate(360deg); } }
 </style>
