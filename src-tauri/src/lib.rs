@@ -13,9 +13,14 @@ use tauri_plugin_autostart::MacosLauncher;
 pub fn run() {
 
     #[cfg(target_os = "windows")]
-    if let Ok(current_exe) = env::current_exe() {
-        if let Some(parent) = current_exe.parent() {
-            let _ = env::set_current_dir(parent);
+    {
+        use std::env;
+        use std::path::PathBuf;
+
+        if let Ok(current_exe) = env::current_exe() {
+            if let Some(parent) = current_exe.parent() {
+                let _ = env::set_current_dir(parent);
+            }
         }
     }
 
