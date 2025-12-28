@@ -58,6 +58,7 @@ export const AuthService = {
                 await db.set(KEY_JWT, data.token);
                 await db.save();
 
+                authToken.set(data.token);
                 isAuthenticated.set(true);
 
                 const exp = getJwtExpiration(data.token);
@@ -79,6 +80,7 @@ export const AuthService = {
         if (logoutTimer) clearTimeout(logoutTimer);
 
         isAuthenticated.set(false);
+        authToken.set(null);
 
         await db.set(KEY_JWT, null);
         await db.save();
