@@ -103,11 +103,11 @@ function scheduleAutoLogout(expTimestamp: number) {
     if (timeLeft > 0) {
         logoutTimer = setTimeout(() => {
             console.log("[AuthService] Token expired. Logging out...");
-            AuthService.logout();
+            void AuthService.logout();
             authError.set("Session expired. Please log in again.");
         }, timeLeft);
     } else {
-        AuthService.logout();
+        void AuthService.logout();
     }
 }
 

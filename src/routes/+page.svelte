@@ -15,16 +15,12 @@
   let pollInterval: any;
 
   onMount(async () => {
-    // Ensure settings are loaded first (so we have the API URL)
     await SettingsService.load();
 
-    // Load the list of servers from disk
     await ServerService.load();
 
-    // Check their status immediately
     await ServerService.syncAll();
 
-    // Poll for status updates every 5 seconds
     pollInterval = setInterval(() => {
       ServerService.syncAll();
     }, 5000);
@@ -71,7 +67,6 @@
 </div>
 
 <style>
-  /* --- EXACT SAME CSS AS BEFORE --- */
   .view-content {
     display: flex;
     flex-direction: column;
