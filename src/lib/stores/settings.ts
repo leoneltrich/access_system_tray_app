@@ -1,19 +1,43 @@
+import { writable } from 'svelte/store';
+import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
 import { db } from './app-db';
 import { api } from '$lib/services/api';
 import { serverUrl, isSettingsLoaded, DEFAULT_URL } from '$lib/stores/config';
 
 const KEY_SERVER_URL = 'server_url';
 
-export { serverUrl, isSettingsLoaded }; // Re-export for convenience
+export const autoStartEnabled = writable<boolean>(false);
+
+export { serverUrl, isSettingsLoaded };
 
 export async function loadSettings() {
     try {
-        const val = await db.get<string>(KEY_SERVER_URL);
-        serverUrl.set(val || DEFAULT_URL);
+        const [urlVal, autoStartVal] = await Promise.all([
+            db.get<string>(KEY_SERVER_URL),
+            isEnabled().catch(() => false)
+        ]);
+
+        serverUrl.set(urlVal || DEFAULT_URL);
+        autoStartEnabled.set(autoStartVal);
+
     } catch (err) {
         console.error("Failed to load settings:", err);
     } finally {
         isSettingsLoaded.set(true);
+    }
+}
+
+export async function toggleAppStart(): Promise<boolean> {
+    const current = await isEnabled();
+
+    if (current) {
+        await disable();
+        autoStartEnabled.set(false);
+        return false;
+    } else {
+        await enable();
+        autoStartEnabled.set(true);
+        return true;
     }
 }
 
@@ -23,7 +47,7 @@ export async function updateServerUrl(candidateUrl: string) {
         throw new Error("URL must start with http:// or https://");
     }
 
-    // 2. Health Check (via API service)
+    // 2. Health Check
     try {
         await api.checkConnection(candidateUrl);
     } catch (err: any) {
