@@ -82,6 +82,10 @@ pub fn run() {
                         let _ = win_clone.hide();
                     }
                 }
+                WindowEvent::CloseRequested { api, .. } => {
+                    let _ = win_clone.hide();
+                    api.prevent_close();
+                }
                 _ => {}
             });
 
@@ -94,6 +98,13 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app_handle, event| match event {
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                // This stops the app from exiting when the window is hidden
+                api.prevent_exit();
+            }
+            _ => {}
+        });
 }
