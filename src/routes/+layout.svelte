@@ -10,11 +10,7 @@
 
     let isMac = $state(false);
 
-    const knownSubPages = ['/login', '/settings', '/add-server'];
-
-    let isSubPage = $derived(
-        knownSubPages.some(route => page.url.pathname.includes(route))
-    );
+    let isSubPage = $derived(page.url.pathname !== '/' && (page.url.pathname as string) !== '');
 
     onMount(async () => {
         await AuthService.init();
@@ -37,7 +33,6 @@
 <div class="window-wrapper" class:platform-mac={isMac}>
 
     <div class="app-container">
-
         <div class="nav-actions">
             {#if isSubPage}
                 <button class="nav-btn" onclick={goHome} aria-label="Close">
