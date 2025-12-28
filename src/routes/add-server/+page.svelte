@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { addServer } from '$lib/stores/servers';
+    import { ServerService } from '$lib/services/servers';
     import { mapBackendError } from '$lib/utils';
     import FormInput from '$lib/components/ui/FormInput.svelte';
 
@@ -17,7 +17,7 @@
         errorMsg = "";
 
         try {
-            await addServer(trimmedId);
+            await ServerService.add(trimmedId);
             await goto('/');
         } catch (err: any) {
             console.error("Add server failed:", err);

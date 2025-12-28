@@ -8,13 +8,15 @@
     removeServer,
     syncAllStatuses
   } from '$lib/stores/servers';
-  import { loadSettings } from "$lib/stores/settings";
+
+  import { SettingsService } from "$lib/services/settings";
   import ServerCard from '$lib/components/dashboard/ServerCard.svelte';
 
   let pollInterval: any;
 
   onMount(async () => {
-    await loadSettings();
+    await SettingsService.load();
+
     await loadServers();
     await syncAllStatuses();
     pollInterval = setInterval(() => {

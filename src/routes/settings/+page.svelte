@@ -1,13 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import {
-        serverUrl,
-        isSettingsLoaded,
-        autoStartEnabled,    // New Store
-        loadSettings,
-        updateServerUrl,
-        toggleAppStart       // New Action
-    } from '$lib/stores/settings';
+    import { serverUrl, isSettingsLoaded, autoStartEnabled } from '$lib/stores/settings';
+    import { SettingsService } from '$lib/services/settings';
 
     import Toggle from '$lib/components/ui/Toggle.svelte';
     import FormInput from '$lib/components/ui/FormInput.svelte';
@@ -21,7 +15,7 @@
     let statusMessage = $state("");
 
     onMount(async () => {
-        await loadSettings();
+        await SettingsService.load();
         inputUrl = $serverUrl;
     });
 
@@ -30,7 +24,7 @@
         autoStartProcessing = true;
 
         try {
-            await toggleAppStart();
+            await SettingsService.toggleAutoStart();
         } catch (error) {
             console.error('Failed to toggle autostart', error);
         } finally {
@@ -47,7 +41,7 @@
         statusMessage = "";
 
         try {
-            await updateServerUrl(inputUrl);
+            await SettingsService.updateServerUrl(inputUrl);
             saveStatus = 'success';
             statusMessage = "Settings saved successfully";
             setTimeout(() => { saveStatus = 'idle'; statusMessage = ""; }, 3000);
