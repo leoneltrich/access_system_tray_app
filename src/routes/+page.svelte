@@ -2,25 +2,31 @@
   import { onMount, onDestroy } from 'svelte';
   import { Plus } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import {
-    servers,
-    loadServers,
-    removeServer,
-    syncAllStatuses
-  } from '$lib/stores/servers';
 
+  // 1. Data comes from the Store
+  import { servers } from '$lib/stores/servers';
+
+  // 2. Logic comes from the Services
+  import { ServerService } from '$lib/services/servers';
   import { SettingsService } from "$lib/services/settings";
+
   import ServerCard from '$lib/components/dashboard/ServerCard.svelte';
 
   let pollInterval: any;
 
   onMount(async () => {
+    // Ensure settings are loaded first (so we have the API URL)
     await SettingsService.load();
 
-    await loadServers();
-    await syncAllStatuses();
+    // Load the list of servers from disk
+    await ServerService.load();
+
+    // Check their status immediately
+    await ServerService.syncAll();
+
+    // Poll for status updates every 5 seconds
     pollInterval = setInterval(() => {
-      syncAllStatuses();
+      ServerService.syncAll();
     }, 5000);
   });
 
@@ -49,7 +55,7 @@
         {#each $servers as server (server.id)}
           <ServerCard
                   {server}
-                  ondelete={() => removeServer(server.id)}
+                  ondelete={() => ServerService.remove(server.id)}
           />
         {/each}
       </div>

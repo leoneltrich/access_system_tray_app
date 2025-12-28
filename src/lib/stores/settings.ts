@@ -1,7 +1,9 @@
 import { writable } from 'svelte/store';
 
-// We re-export these from config so the UI has a single import point for "Settings Data"
-export { serverUrl, isSettingsLoaded } from '$lib/stores/config';
+export const DEFAULT_URL = 'https://api.myapp.com';
 
-// This store is specific to the settings module, so we define it here
+// --- STATE ---
+export const serverUrl = writable<string>(DEFAULT_URL);
+export const isSettingsLoaded = writable<boolean>(false);
+
 export const autoStartEnabled = writable<boolean>(false);

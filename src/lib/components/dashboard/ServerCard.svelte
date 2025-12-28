@@ -1,15 +1,11 @@
 <script lang="ts">
-    import { Trash2, ShieldCheck, Loader2, AlertCircle, Clock } from 'lucide-svelte';
-    import { requestAccess } from '$lib/stores/servers';
+    import { Trash2, ShieldCheck, LoaderCircle, CircleAlert, Clock } from 'lucide-svelte';
+    import { ServerService } from '$lib/services/servers';
     import { mapBackendError } from '$lib/utils';
 
-    interface Server {
-        id: string;
-        status: string;
-        timeRemaining?: string | number;
-    }
+    import type { ServerCard } from '$lib/stores/servers';
 
-    let { server, ondelete }: { server: Server, ondelete: (id: string) => void } = $props();
+    let { server, ondelete }: { server: ServerCard, ondelete: (id: string) => void } = $props();
 
     let isLoading = $state(false);
     let errorMessage = $state<string | null>(null);
@@ -31,7 +27,7 @@
         errorMessage = null;
 
         try {
-            await requestAccess(server.id);
+            await ServerService.requestAccess(server.id);
         } catch (err: any) {
             console.error(err);
             errorMessage = mapBackendError(err);
@@ -59,16 +55,16 @@
 
     <div class="card-status-area">
         {#if errorMessage}
-      <span class="error-text">
-        <AlertCircle size={12}/> {errorMessage}
-      </span>
+            <span class="error-text">
+                <CircleAlert size={12}/> {errorMessage}
+            </span>
         {:else}
 
             <div class="status-row">
                 <span class="status-dot" class:active={server.status === 'access-granted'}></span>
                 <span class="status-text">
-            {server.status === 'access-granted' ? 'Active' : 'No Access'}
-          </span>
+                    {server.status === 'access-granted' ? 'Active' : 'No Access'}
+                </span>
             </div>
 
             {#if server.status === 'access-granted' && server.timeRemaining}
@@ -89,7 +85,7 @@
                 disabled={isLoading}
         >
             {#if isLoading}
-                <div class="spin"><Loader2 size={16} /></div>
+                <div class="spin"><LoaderCircle size={16} /></div>
                 <span>Verifying...</span>
             {:else if server.status === 'access-granted'}
                 <ShieldCheck size={16} />

@@ -2,8 +2,12 @@ import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
 import { db } from '$lib/stores/app-db';
 import { api } from '$lib/services/api';
 
-import { serverUrl, isSettingsLoaded, DEFAULT_URL } from '$lib/stores/config';
-import { autoStartEnabled } from '$lib/stores/settings';
+import {
+    serverUrl,
+    isSettingsLoaded,
+    autoStartEnabled,
+    DEFAULT_URL
+} from '$lib/stores/settings';
 
 const KEY_SERVER_URL = 'server_url';
 

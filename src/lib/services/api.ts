@@ -1,8 +1,7 @@
 import { get } from 'svelte/store';
 import { fetch } from '@tauri-apps/plugin-http';
 import { db } from '$lib/stores/app-db';
-import { serverUrl } from '$lib/stores/config';
-
+import { serverUrl } from '$lib/stores/settings';
 const KEY_JWT = 'auth_token';
 
 // ---------------------------------------------------------
