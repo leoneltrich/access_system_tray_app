@@ -1,6 +1,7 @@
 import { db } from '$lib/stores/app-db';
 import { api } from '$lib/services/api';
 import { isAuthenticated, authLoading, authError, authToken } from '$lib/stores/auth';
+import {mapBackendError} from "$lib/utils";
 
 const KEY_JWT = 'auth_token';
 
@@ -67,7 +68,13 @@ export const AuthService = {
 
         } catch (err: any) {
             console.error("[AuthService] Login failed:", err);
-            authError.set(err.message || "Connection to backend failed");
+
+            if (err.message === 'ERR_AUTH') {
+                authError.set("Incorrect username or password.");
+            } else {
+                authError.set(mapBackendError(err));
+            }
+
         } finally {
             authLoading.set(false);
         }
