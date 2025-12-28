@@ -4,7 +4,6 @@ use tauri::{
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, Runtime,
 };
-// We don't need Position/WindowExt here anymore because events.rs handles it!
 
 mod events;
 
@@ -51,6 +50,9 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                         // --- WINDOWS ---
                         #[cfg(target_os = "windows")]
                         {
+                            use std::thread;
+                            use std::time::Duration;
+                            
                             if win.is_visible().unwrap_or(false) {
                                 let _ = win.hide();
                             } else {
