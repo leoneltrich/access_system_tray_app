@@ -3,18 +3,14 @@
     import { requestAccess } from '$lib/stores/servers';
     import { mapBackendError } from '$lib/utils';
 
-    // 1. Define the Shape of the Server Object
     interface Server {
         id: string;
         status: string;
         timeRemaining?: string | number;
     }
 
-    // 2. Define Props using Svelte 5 Interface
-    // "ondelete" replaces the event dispatcher
     let { server, ondelete }: { server: Server, ondelete: (id: string) => void } = $props();
 
-    // 3. Use Runes for local state
     let isLoading = $state(false);
     let errorMessage = $state<string | null>(null);
 
@@ -107,7 +103,6 @@
 </div>
 
 <style>
-    /* --- EXACT SAME CSS AS BEFORE --- */
     .card {
         background: #1a1a1a;
         border: 1px solid #333;

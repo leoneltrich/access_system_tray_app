@@ -50,8 +50,6 @@ export async function checkServerStatus(serverName: string) {
         });
 
     } catch (err: any) {
-        // This try/catch IS necessary because we consume the error
-        // to update state (offline/idle) instead of throwing it.
         const msg = err.message || "";
 
         if (msg === "ERR_AUTH") {
@@ -74,14 +72,10 @@ export async function addServer(serverName: string) {
     const currentList = get(servers);
     if (currentList.some(s => s.id === serverName)) throw new Error("ERR_DUPLICATE");
 
-    // No try/catch needed here.
-    // If api.get fails, the error bubbles up.
-    // If !data.exists, we throw manually, which also bubbles up.
     const data = await api.get<{ exists: boolean }>(`/users/servers/${serverName}/exists`);
 
     if (!data.exists) throw new Error("ERR_NOT_FOUND");
 
-    // Add to local state
     const newServer: ServerCard = { id: serverName, status: 'idle' };
 
     servers.update(list => {
@@ -92,14 +86,11 @@ export async function addServer(serverName: string) {
 }
 
 export async function requestAccess(serverName: string) {
-    // No try/catch needed.
-    // If api.post fails, execution stops and the error goes to the UI.
+
     await api.post('/users/access', { server_id: serverName });
 
-    // Optimistic update
     updateServerState(serverName, { status: 'access-granted' });
 
-    // Fetch accurate time immediately
     await checkServerStatus(serverName);
 }
 

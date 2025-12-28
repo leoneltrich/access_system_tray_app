@@ -2,12 +2,12 @@
     let {
         checked = false,
         isLoading = false,
-        ariaLabel = "Toggle setting", // Default fallback
+        ariaLabel = "Toggle setting",
         onToggle
     }: {
         checked: boolean,
         isLoading?: boolean,
-        ariaLabel?: string, // NEW: Required for accessibility
+        ariaLabel?: string,
         onToggle: () => void
     } = $props();
 </script>
@@ -56,7 +56,6 @@
     .toggle:active { transform: scale(0.95); }
     .toggle.active { background: #ffffff; }
 
-    /* Works perfectly on span because position: absolute makes it block-level */
     .thumb {
         width: 20px;
         height: 20px;

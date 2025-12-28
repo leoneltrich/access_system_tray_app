@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { fetch } from '@tauri-apps/plugin-http';
 import { db } from './app-db';
-import { serverUrl } from './settings'; // We need the URL to know where to log in
+import { serverUrl } from './settings';
 
 const KEY_JWT = 'auth_token';
 
@@ -43,7 +43,6 @@ function getJwtExpiration(token: string): number | null {
     }
 }
 
-// --- ACTIONS ---
 
 /**
  * Initialize Auth: Load token from disk and check if valid.

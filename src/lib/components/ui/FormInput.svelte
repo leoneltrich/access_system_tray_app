@@ -69,7 +69,6 @@
     input:focus { border-color: #555; background: #222; }
     input:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Error State */
     input.input-error { border-color: #ef4444; color: #ef4444; }
 
     .error-msg {

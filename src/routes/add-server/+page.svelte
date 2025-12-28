@@ -63,7 +63,6 @@
 </div>
 
 <style>
-    /* Clean layout styles only */
     .view-content { display: flex; flex-direction: column; height: 100%; }
     .view-header { height: 2rem; display: flex; align-items: center; margin-bottom: 2rem; flex-shrink: 0; }
     .view-title { margin: 0; font-size: 1.25rem; font-weight: 600; }

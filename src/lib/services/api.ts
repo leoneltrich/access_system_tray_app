@@ -29,8 +29,6 @@ class ApiService {
         const cleanBase = baseUrl.replace(/\/$/, "");
 
         // Construct full URL: Base + Version Prefix + Endpoint
-        // Result: "https://api.com" + "" + "/users/access"
-        // Future: "https://api.com" + "/v1" + "/users/access"
         const url = `${cleanBase}${API_PREFIX}${endpoint}`;
 
         const headers = {
@@ -59,7 +57,6 @@ class ApiService {
         const cleanBase = baseUrl.replace(/\/$/, "");
         const url = `${cleanBase}/health`;
 
-        // We use a shorter timeout for health checks
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -72,7 +69,7 @@ class ApiService {
             return response.ok;
         } catch (err) {
             clearTimeout(timeoutId);
-            throw err; // Let the caller handle the specific error message
+            throw err;
         }
     }
 

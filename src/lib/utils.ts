@@ -1,8 +1,6 @@
 export function mapBackendError(error: any): string {
-    // 1. Get the message string
     const code = error?.message || String(error);
 
-    // 2. Map standard codes
     switch (code) {
         case 'ERR_AUTH':        return "Please Log In";
         case 'ERR_FORBIDDEN':   return "Access Denied";
@@ -14,6 +12,5 @@ export function mapBackendError(error: any): string {
         case 'ERR_UNKNOWN':     return "Unknown Error";
     }
 
-    // 3. Fallback for unexpected errors
     return "Request Failed";
 }

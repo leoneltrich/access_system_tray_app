@@ -7,8 +7,6 @@
     let password = $state("");
     let isTouched = $state(false);
 
-    // Helper to keep the template clean
-    // We show the error only if one exists AND the user hasn't started typing to fix it yet
     let showError = $derived(!!$authError && !isTouched);
 
     function handleLogin(event?: Event) {
