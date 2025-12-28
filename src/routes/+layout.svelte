@@ -10,7 +10,11 @@
 
     let isMac = $state(false);
 
-    let isSubPage = $derived(page.url.pathname !== '/');
+    const knownSubPages = ['/login', '/settings', '/add-server'];
+
+    let isSubPage = $derived(
+        knownSubPages.some(route => page.url.pathname.includes(route))
+    );
 
     onMount(async () => {
         await AuthService.init();
