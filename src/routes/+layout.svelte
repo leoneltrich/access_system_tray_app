@@ -4,7 +4,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { type } from '@tauri-apps/plugin-os';
-    import { initAuth } from '$lib/stores/auth';
+    import { AuthService } from '$lib/services/auth';
 
     let { children } = $props();
 
@@ -13,7 +13,7 @@
     let isSubPage = $derived(page.url.pathname !== '/');
 
     onMount(async () => {
-        await initAuth();
+        await AuthService.init();
 
         try {
             const osType = type();

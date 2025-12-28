@@ -1,6 +1,7 @@
 <script lang="ts">
     import { CircleCheck } from 'lucide-svelte';
-    import { isAuthenticated, authLoading, authError, login, logout } from '$lib/stores/auth';
+    import { isAuthenticated, authLoading, authError } from '$lib/stores/auth';
+    import { AuthService } from '$lib/services/auth';
     import FormInput from '$lib/components/ui/FormInput.svelte';
 
     let username = $state("");
@@ -14,13 +15,13 @@
         if (!username || !password) return;
 
         isTouched = false;
-        login(username, password);
+        AuthService.login(username, password);
     }
 
     function handleLogout() {
         username = "";
         password = "";
-        logout();
+        AuthService.logout();
     }
 
     function handleInput() {

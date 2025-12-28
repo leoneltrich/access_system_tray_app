@@ -1,8 +1,7 @@
 import { get } from 'svelte/store';
 import { fetch } from '@tauri-apps/plugin-http';
-import { db } from '$lib/stores/app-db';
-import { serverUrl } from '$lib/stores/settings';
-const KEY_JWT = 'auth_token';
+import { authToken } from '$lib/stores/auth';
+import {serverUrl} from "$lib/stores/settings";
 
 // ---------------------------------------------------------
 // CONFIGURATION
@@ -16,7 +15,7 @@ class ApiService {
      * Helper to construct headers and full URL dynamically
      */
     private async prepareRequest(endpoint: string) {
-        const token = await db.get<string>(KEY_JWT);
+        const token = get(authToken);
         const baseUrl = get(serverUrl);
 
         if (!baseUrl) {
