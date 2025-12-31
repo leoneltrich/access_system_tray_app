@@ -1,4 +1,5 @@
 import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
+import { invoke } from '@tauri-apps/api/core';
 import { db } from '$lib/stores/app-db';
 import { api } from '$lib/services/api';
 
@@ -47,6 +48,7 @@ export const SettingsService = {
             return false;
         } else {
             await enable();
+            await invoke('fix_autostart_path');
             autoStartEnabled.set(true);
             return true;
         }

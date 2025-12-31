@@ -3722,6 +3722,7 @@ dependencies = [
  "tauri-plugin-os",
  "tauri-plugin-positioner",
  "tauri-plugin-store",
+ "winreg 0.55.0",
 ]
 
 [[package]]
