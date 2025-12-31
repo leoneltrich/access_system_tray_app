@@ -1,9 +1,11 @@
+use std::sync::atomic::Ordering;
 use crate::constants::MAIN_WINDOW_LABEL;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, Runtime,
 };
+use crate::AppState;
 
 mod events;
 
@@ -22,10 +24,15 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
         // 2. Menu Events (Right Click)
         .on_menu_event(move |app, event| match event.id.as_ref() {
-            "quit" => app.exit(0),
+            "quit" => {
+                // FLIP THE SWITCH
+                let state = app.state::<AppState>();
+                state.is_quitting.store(true, Ordering::Relaxed);
+
+                app.exit(0); // Now this will pass the check in lib.rs
+            },
             "show" => {
                 if let Some(win) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-                    // Reuse the helper
                     let _ = events::position_and_show(&win);
                 }
             }
