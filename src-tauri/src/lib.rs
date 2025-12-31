@@ -10,6 +10,7 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 use tauri_plugin_autostart::MacosLauncher;
+
 #[cfg(target_os = "windows")]
 use winreg::{enums::*, RegKey};
 
