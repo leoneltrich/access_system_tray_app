@@ -5,7 +5,7 @@ use winreg::{enums::*, RegKey};
 #[cfg(target_os = "windows")]
 use crate::constants::AUTOSTART_APP_NAME;
 
-pub fn ensure_windows_autostart(_current_exe: PathBuf) -> Result<(), String> {
+pub fn ensure_windows_autostart(current_exe: PathBuf) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         let exe_str = current_exe.to_string_lossy().to_string();
