@@ -1,6 +1,9 @@
-use tauri::{Runtime, WebviewWindowBuilder};
+use tauri::{AppHandle, Runtime, WebviewWindowBuilder};
 
-pub fn configure<R: Runtime>(builder: WebviewWindowBuilder<R>) -> WebviewWindowBuilder<R> {
+// CHANGED: Added <'a> for consistency
+pub fn configure<'a, R: Runtime>(
+    builder: WebviewWindowBuilder<'a, R, AppHandle<R>>
+) -> WebviewWindowBuilder<'a, R, AppHandle<R>> {
     let mut b = builder
         .title("Tray App")
         .inner_size(300.0, 400.0)

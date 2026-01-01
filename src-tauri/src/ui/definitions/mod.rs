@@ -1,4 +1,4 @@
-use tauri::{Runtime, WebviewWindowBuilder};
+use tauri::{AppHandle, Runtime, WebviewWindowBuilder};
 use crate::constants::MAIN_WINDOW_LABEL;
 
 mod dashboard;
@@ -14,10 +14,10 @@ impl WindowType {
         }
     }
 
-    pub fn configure<R: Runtime>(
+    pub fn configure<'a, R: Runtime>(
         &self,
-        builder: WebviewWindowBuilder<R>
-    ) -> WebviewWindowBuilder<R> {
+        builder: WebviewWindowBuilder<'a, R, AppHandle<R>>
+    ) -> WebviewWindowBuilder<'a, R, AppHandle<R>> {
         match self {
             WindowType::Dashboard => dashboard::configure(builder),
         }
