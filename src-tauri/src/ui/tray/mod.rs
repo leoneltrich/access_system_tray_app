@@ -18,19 +18,21 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
     // 4. Build Tray
-    TrayIconBuilder::new()
+    let mut builder = TrayIconBuilder::new()
         .icon(icon)
         .menu(&menu)
-        .show_menu_on_left_click(false)
+        .show_menu_on_left_click(false);
 
-        // Delegate Menu Events (Right-click items)
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.icon_as_template(true);
+    }
+
+    builder
         .on_menu_event(move |app, event| {
             events::tray::handle_menu_event(app, event.id.as_ref());
         })
-
-        // Delegate Icon Events (Left-click toggle)
         .on_tray_icon_event(|tray, event| {
-            // Mac handling is unique due to OS behavior
             #[cfg(target_os = "macos")]
             tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
 
