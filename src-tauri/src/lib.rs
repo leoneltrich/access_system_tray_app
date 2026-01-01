@@ -14,13 +14,14 @@ use ui::definitions::WindowType;
 
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
+use crate::api::system::fix_autostart_path;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         // 1. Register Commands
         .invoke_handler(tauri::generate_handler![
-            api::system::fix_autostart_path
+            fix_autostart_path
         ])
 
         // 2. Manage State
