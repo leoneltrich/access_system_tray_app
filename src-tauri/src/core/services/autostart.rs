@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 #[cfg(target_os = "windows")]
 use winreg::{enums::*, RegKey};
+#[cfg(target_os = "windows")]
+use crate::constants::AUTOSTART_APP_NAME;
 
 pub fn ensure_windows_autostart(_current_exe: PathBuf) -> Result<(), String> {
     #[cfg(target_os = "windows")]
@@ -17,7 +19,7 @@ pub fn ensure_windows_autostart(_current_exe: PathBuf) -> Result<(), String> {
         let key = hkcu.open_subkey_with_flags(&path, KEY_SET_VALUE | KEY_READ)
             .map_err(|e| e.to_string())?;
 
-        let app_name = "ServeMe"; // TODO: Extract to config
+        let app_name = AUTOSTART_APP_NAME;
         let quoted_path = format!("\"{}\"", exe_str);
 
         key.set_value(&app_name, &quoted_path)
