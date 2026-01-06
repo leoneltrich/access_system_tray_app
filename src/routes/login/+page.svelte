@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import { listen, type UnlistenFn } from '@tauri-apps/api/event';
     import { CircleCheck } from 'lucide-svelte';
     import { isAuthenticated, authLoading, authError } from '$lib/stores/auth';
     import { AuthService } from '$lib/services/auth';
@@ -9,6 +11,26 @@
     let isTouched = $state(false);
 
     let showError = $derived(!!$authError && !isTouched);
+
+    onMount(() => {
+        let unlisten: UnlistenFn | undefined;
+
+        const setup = async () => {
+            await AuthService.init();
+
+            unlisten = await listen('tauri://focus', async () => {
+                await AuthService.init();
+            });
+        };
+
+        setup();
+
+        return () => {
+            if (unlisten) {
+                unlisten();
+            }
+        };
+    });
 
     function handleLogin(event?: Event) {
         if (event) event.preventDefault();
