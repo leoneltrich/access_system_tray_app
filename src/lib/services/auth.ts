@@ -9,7 +9,14 @@ const KEY_JWT = 'auth_token';
 let logoutTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface LoginResponse {
-    token: string;
+    access_token: string;
+    refresh_token: string;
+}
+
+interface AuthData {
+    access_token: string;
+    refresh_token: string;
+    username: string;
 }
 
 export const AuthService = {
@@ -19,15 +26,14 @@ export const AuthService = {
      */
     async init() {
         try {
-            const token = await db.get<string>(KEY_JWT);
+            const authData = await db.get<AuthData>(KEY_JWT);
 
-            if (token) {
-                const exp = getJwtExpiration(token);
+            if (authData?.access_token) {
+                const exp = getJwtExpiration(authData.access_token);
                 const now = Math.floor(Date.now() / 1000);
 
                 if (exp && exp > now) {
-                    // Update State
-                    authToken.set(token);
+                    authToken.set(authData.access_token);
                     isAuthenticated.set(true);
 
                     scheduleAutoLogout(exp);
@@ -55,14 +61,20 @@ export const AuthService = {
                 password: pass
             });
 
-            if (data.token) {
-                await db.set(KEY_JWT, data.token);
+            if (data.access_token && data.refresh_token) {
+                const authData: AuthData = {
+                    access_token: data.access_token,
+                    refresh_token: data.refresh_token,
+                    username: username
+                }
+
+                await db.set(KEY_JWT, authData);
                 await db.save();
 
-                authToken.set(data.token);
+                authToken.set(data.access_token);
                 isAuthenticated.set(true);
 
-                const exp = getJwtExpiration(data.token);
+                const exp = getJwtExpiration(data.access_token);
                 if (exp) scheduleAutoLogout(exp);
             }
 

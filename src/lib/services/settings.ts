@@ -59,12 +59,12 @@ export const SettingsService = {
      * Updates: serverUrl, DB
      */
     async updateServerUrl(candidateUrl: string) {
-        // 1. Input Validation
+        // Input Validation
         if (!candidateUrl.startsWith('http')) {
             throw new Error("URL must start with http:// or https://");
         }
 
-        // 2. Health Check (Network)
+        // Health Check (Network)
         try {
             await api.checkConnection(candidateUrl);
         } catch (err: any) {
@@ -72,7 +72,7 @@ export const SettingsService = {
             throw new Error(msg);
         }
 
-        // 3. Persist (Disk & State)
+        // Persist (Disk & State)
         try {
             const cleanUrl = candidateUrl.replace(/\/$/, "");
 

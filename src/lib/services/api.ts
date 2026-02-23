@@ -8,7 +8,7 @@ import {serverUrl} from "$lib/stores/settings";
 // Change this to '/v1' when the backend updates.
 // Currently empty for unversioned API.
 // ---------------------------------------------------------
-const API_PREFIX = '';
+const API_PREFIX = '/api/v1';
 
 class ApiService {
     /**
@@ -53,7 +53,7 @@ class ApiService {
 
     async checkConnection(baseUrl: string): Promise<boolean> {
         const cleanBase = baseUrl.replace(/\/$/, "");
-        const url = `${cleanBase}/health`;
+        const url = `${cleanBase}${API_PREFIX}/health`;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
