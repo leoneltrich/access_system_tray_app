@@ -2,6 +2,7 @@ import {db} from '$lib/stores/app-db';
 import {api} from '$lib/services/api';
 import {isAuthenticated, authLoading, authError, authSession, type Session} from '$lib/stores/auth';
 import {mapBackendError} from "$lib/utils";
+import {get} from "svelte/store";
 
 const KEY_SESSION = 'user_session';
 let isRefreshing = false;
@@ -122,13 +123,25 @@ export const AuthService = {
      * Logout Function
      */
     async logout() {
-        if (logoutTimer) clearTimeout(logoutTimer);
 
-        isAuthenticated.set(false);
-        authSession.set(null);
+        const session = get(authSession);
 
-        await db.set(KEY_SESSION, null);
-        await db.save();
+        try {
+            if (session?.refresh_token) {
+                await api.post('/logout', {refresh_token: session.refresh_token});
+            }
+            console.log("[AuthService] Server-side session invalidated.");
+        } catch (err: any) {
+            console.error("[AuthService] Server-side logout failed:", err.message);
+        } finally {
+            if (logoutTimer) clearTimeout(logoutTimer);
+
+            isAuthenticated.set(false);
+            authSession.set(null);
+
+            await db.set(KEY_SESSION, null);
+            await db.save();
+        }
     },
 };
 
