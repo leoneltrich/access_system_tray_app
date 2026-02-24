@@ -1,7 +1,12 @@
 import { writable } from 'svelte/store';
 
-// --- STATE ---
+export interface Session {
+    access_token: string;
+    refresh_token: string;
+    username: string;
+}
+
 export const isAuthenticated = writable<boolean>(false);
 export const authLoading = writable<boolean>(false);
 export const authError = writable<string>("");
-export const authToken = writable<string | null>(null);
+export const authSession = writable<Session | null>(null);

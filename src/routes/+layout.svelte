@@ -1,19 +1,31 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { Settings, X, User } from 'lucide-svelte';
-    import { goto } from '$app/navigation';
-    import { page } from '$app/state';
-    import { type } from '@tauri-apps/plugin-os';
-    import { AuthService } from '$lib/services/auth';
+    import {onMount} from 'svelte';
+    import {Settings, X, User} from 'lucide-svelte';
+    import {goto} from '$app/navigation';
+    import {page} from '$app/state';
+    import {type} from '@tauri-apps/plugin-os';
+    import {AuthService} from '$lib/services/auth';
+    import {listen, type UnlistenFn} from "@tauri-apps/api/event";
 
-    let { children } = $props();
+    let {children} = $props();
 
     let isMac = $state(false);
 
     let isSubPage = $derived(page.url.pathname !== '/' && (page.url.pathname as string) !== '');
 
-    onMount(async () => {
-        await AuthService.init();
+    onMount(() => {
+        let unlisten: UnlistenFn;
+
+        const setup = async () => {
+            await AuthService.init();
+
+            unlisten = await listen('tauri://focus', async () => {
+                console.log("App gained focus, re-validating session.");
+                await AuthService.init();
+            })
+        }
+
+        setup();
 
         try {
             const osType = type();
@@ -23,11 +35,23 @@
         } catch (e) {
             console.warn("Could not detect OS, defaulting to standard view", e);
         }
+
+        return () => {
+            if (unlisten) unlisten()
+        }
     });
 
-    function goHome() { goto('/'); }
-    function goSettings() { goto('/settings'); }
-    function goProfile() { goto('/login'); }
+    function goHome() {
+        goto('/');
+    }
+
+    function goSettings() {
+        goto('/settings');
+    }
+
+    function goProfile() {
+        goto('/login');
+    }
 </script>
 
 <div class="window-wrapper" class:platform-mac={isMac}>
@@ -36,14 +60,14 @@
         <div class="nav-actions">
             {#if isSubPage}
                 <button class="nav-btn" onclick={goHome} aria-label="Close">
-                    <X size={18} />
+                    <X size={18}/>
                 </button>
             {:else}
                 <button class="nav-btn" onclick={goProfile} aria-label="Profile">
-                    <User size={18} />
+                    <User size={18}/>
                 </button>
                 <button class="nav-btn" onclick={goSettings} aria-label="Settings">
-                    <Settings size={18} />
+                    <Settings size={18}/>
                 </button>
             {/if}
         </div>
@@ -126,6 +150,7 @@
         gap: 0.5rem;
         z-index: 50;
     }
+
     .nav-btn {
         background: transparent;
         border: none;
@@ -136,6 +161,7 @@
         display: flex;
         transition: all 0.2s ease;
     }
+
     .nav-btn:hover {
         color: #ffffff;
         background-color: rgba(255, 255, 255, 0.1);

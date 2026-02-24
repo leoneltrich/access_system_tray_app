@@ -1,6 +1,6 @@
-import { get } from 'svelte/store';
-import { fetch } from '@tauri-apps/plugin-http';
-import { authToken } from '$lib/stores/auth';
+import {get} from 'svelte/store';
+import {fetch} from '@tauri-apps/plugin-http';
+import {authSession} from '$lib/stores/auth';
 import {serverUrl} from "$lib/stores/settings";
 
 // ---------------------------------------------------------
@@ -15,7 +15,7 @@ class ApiService {
      * Helper to construct headers and full URL dynamically
      */
     private async prepareRequest(endpoint: string) {
-        const token = get(authToken);
+        const session = get(authSession);
         const baseUrl = get(serverUrl);
 
         if (!baseUrl) {
@@ -30,24 +30,31 @@ class ApiService {
         const url = `${cleanBase}${API_PREFIX}${endpoint}`;
 
         const headers = {
-            'Authorization': token ? `Bearer ${token}` : '',
+            'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
             'Content-Type': 'application/json'
         };
 
-        return { url, headers };
+        return {url, headers};
     }
 
     private handleResponse(response: Response) {
         if (response.ok) return response;
 
         switch (response.status) {
-            case 401: throw new Error("ERR_AUTH");
-            case 403: throw new Error("ERR_FORBIDDEN");
-            case 404: throw new Error("ERR_NOT_FOUND");
-            case 500: throw new Error("ERR_SERVER");
-            case 502:
-            case 503: throw new Error("ERR_OFFLINE");
-            default: throw new Error(`ERR_UNKNOWN:${response.status}`);
+            case 401:
+                throw new Error("ERR_AUTH");
+            case 403:
+                throw new Error("ERR_FORBIDDEN");
+            case 404:
+                throw new Error("ERR_NOT_FOUND");
+            case 429:
+                throw new Error("ERR_RATE_LIMIT");
+            case 500:
+                throw new Error("ERR_SERVER");
+            case 503:
+                throw new Error("ERR_OFFLINE");
+            default:
+                throw new Error(`ERR_UNKNOWN:${response.status}`);
         }
     }
 
@@ -72,10 +79,10 @@ class ApiService {
     }
 
     async get<T>(endpoint: string): Promise<T> {
-        const { url, headers } = await this.prepareRequest(endpoint);
+        const {url, headers} = await this.prepareRequest(endpoint);
 
         try {
-            const response = await fetch(url, { method: 'GET', headers });
+            const response = await fetch(url, {method: 'GET', headers});
             this.handleResponse(response);
             return await response.json() as T;
         } catch (err: any) {
@@ -85,7 +92,7 @@ class ApiService {
     }
 
     async post<T>(endpoint: string, body: object): Promise<T> {
-        const { url, headers } = await this.prepareRequest(endpoint);
+        const {url, headers} = await this.prepareRequest(endpoint);
 
         try {
             const response = await fetch(url, {

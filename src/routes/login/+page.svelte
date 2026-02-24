@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-    import { CircleCheck } from 'lucide-svelte';
-    import { isAuthenticated, authLoading, authError } from '$lib/stores/auth';
-    import { AuthService } from '$lib/services/auth';
+    import {onMount} from 'svelte';
+    import {CircleCheck} from 'lucide-svelte';
+    import {isAuthenticated, authLoading, authError} from '$lib/stores/auth';
+    import {AuthService} from '$lib/services/auth';
     import FormInput from '$lib/components/ui/FormInput.svelte';
 
     let username = $state("");
@@ -13,23 +12,6 @@
     let showError = $derived(!!$authError && !isTouched);
 
     onMount(() => {
-        let unlisten: UnlistenFn | undefined;
-
-        const setup = async () => {
-            await AuthService.init();
-
-            unlisten = await listen('tauri://focus', async () => {
-                await AuthService.init();
-            });
-        };
-
-        setup();
-
-        return () => {
-            if (unlisten) {
-                unlisten();
-            }
-        };
     });
 
     function handleLogin(event?: Event) {
@@ -106,7 +88,7 @@
         {:else}
             <div class="content-wrapper centered">
                 <div class="success-icon">
-                    <CircleCheck size={48} color="#10b981" />
+                    <CircleCheck size={48} color="#10b981"/>
                 </div>
                 <h3>Authenticated</h3>
                 <p>You are logged in securely.</p>
@@ -124,30 +106,114 @@
 
 <style>
     /* --- LAYOUT --- */
-    .view-content { display: flex; flex-direction: column; height: 100%; }
-    .view-header { height: 2rem; display: flex; align-items: center; margin-bottom: 2rem; flex-shrink: 0; }
-    .view-title { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    .view-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
 
-    .view-body { flex: 1; display: flex; flex-direction: column; }
-    .login-form { display: flex; flex-direction: column; flex: 1; }
+    .view-header {
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-shrink: 0;
+    }
 
-    .content-wrapper { display: flex; flex-direction: column; gap: 1.5rem; }
-    .content-wrapper.centered { align-items: center; justify-content: center; height: 100%; text-align: center; }
+    .view-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
 
-    .inputs-stack { display: flex; flex-direction: column; gap: 0.75rem; }
+    .view-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
 
-    .subtitle { margin: 0; color: #888; font-size: 0.9rem; }
+    .login-form {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .content-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .content-wrapper.centered {
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+    }
+
+    .inputs-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .subtitle {
+        margin: 0;
+        color: #888;
+        font-size: 0.9rem;
+    }
 
     /* --- FOOTER --- */
-    .footer { margin-top: auto; padding-top: 1rem; flex-shrink: 0; }
+    .footer {
+        margin-top: auto;
+        padding-top: 1rem;
+        flex-shrink: 0;
+    }
 
-    .action-btn { width: 100%; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: opacity 0.2s; }
-    .action-btn:hover { opacity: 0.9; }
-    .action-btn.primary { background: white; color: black; }
-    .action-btn.secondary { background: #222; border: 1px solid #333; color: #ddd; }
+    .action-btn {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.2s;
+    }
+
+    .action-btn:hover {
+        opacity: 0.9;
+    }
+
+    .action-btn.primary {
+        background: white;
+        color: black;
+    }
+
+    .action-btn.secondary {
+        background: #222;
+        border: 1px solid #333;
+        color: #ddd;
+    }
 
     /* --- LOGGED IN ICONS --- */
-    .success-icon { background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 50%; margin-bottom: 1rem; display: flex; }
-    h3 { margin: 0 0 0.5rem 0; font-weight: 600; font-size: 1.1rem; }
-    p { color: #888; margin: 0; font-size: 0.9rem; }
+    .success-icon {
+        background: rgba(16, 185, 129, 0.1);
+        padding: 1rem;
+        border-radius: 50%;
+        margin-bottom: 1rem;
+        display: flex;
+    }
+
+    h3 {
+        margin: 0 0 0.5rem 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    p {
+        color: #888;
+        margin: 0;
+        font-size: 0.9rem;
+    }
 </style>
