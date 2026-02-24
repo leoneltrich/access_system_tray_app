@@ -19,6 +19,8 @@ export const AuthService = {
      * Should be called in your root layout onMount.
      */
     async init() {
+        if (logoutTimer) clearTimeout(logoutTimer);
+
         try {
             const session = await db.get<Session>(KEY_SESSION);
 
@@ -92,6 +94,7 @@ export const AuthService = {
     },
 
     async refreshToken(username: string, refresh_token: string) {
+        if (logoutTimer) clearTimeout(logoutTimer);
         if (isRefreshing) return false;
         isRefreshing = true;
 
