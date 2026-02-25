@@ -13,42 +13,45 @@ export const ExtensionService = {
      * @throws {Error} If file selection is cancelled, read fails, or upload fails.
      */
     async add(): Promise<string> {
-        // Open file selection dialog
-        const selectedPath = await open({
-            multiple: false,
-            filters: [{
-                name: 'Executable Files',
-                extensions: ['exe', 'bin', 'sh', 'app'] // Adjust as needed for common binary types
-            }, {
-                name: 'All Files',
-                extensions: ['*']
-            }]
-        });
+        // 1. Prevent auto-hide
+        await invoke('set_dialog_status', { isOpen: true });
 
-        if (!selectedPath) {
-            throw new Error("File selection cancelled.");
-        }
-
-        // Extract the filename from the path
-        const fileName = await basename(selectedPath);
-        if (!fileName) {
-            throw new Error("Could not determine filename from selected path.");
-        }
-
-        // Read the binary content of the file
-        const fileContent = await readFile(selectedPath);
-
-        // Invoke the Rust backend command
         try {
+            // 2. Open file selection dialog
+            const selectedPath = await open({
+                multiple: false,
+                filters: [{
+                    name: 'Executable Files',
+                    extensions: ['exe', 'bin', 'sh', 'app']
+                }, {
+                    name: 'All Files',
+                    extensions: ['*']
+                }]
+            });
+
+            if (!selectedPath) {
+                throw new Error("File selection cancelled.");
+            }
+
+            // 3. Extract the filename from the path
+            const fileName = await basename(selectedPath);
+            if (!fileName) {
+                throw new Error("Could not determine filename from selected path.");
+            }
+
+            // 4. Read binary content
+            const fileContent = await readFile(selectedPath);
+
+            // 5. Invoke upload command
             await invoke('upload_extension', { 
                 name: fileName, 
-                data: Array.from(fileContent) // Convert Uint8Array to Rust's Vec<u8>
+                data: Array.from(fileContent)
             });
-            console.log(`Extension '${fileName}' uploaded successfully.`);
-            return fileName; // Return the name of the uploaded file
-        } catch (error) {
-            console.error(`Failed to upload extension '${fileName}':`, error);
-            throw new Error(`Failed to upload extension: ${error}`);
+
+            return fileName;
+        } finally {
+            // 6. Restore auto-hide behavior
+            await invoke('set_dialog_status', { isOpen: false });
         }
     },
 

@@ -13,7 +13,7 @@ use ui::definitions::WindowType;
 
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
-use crate::api::system::fix_autostart_path;
+use crate::api::system::{fix_autostart_path, set_dialog_status};
 use crate::api::extensions::upload_extension;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -22,7 +22,8 @@ pub fn run() {
         // Register Commands
         .invoke_handler(tauri::generate_handler![
             fix_autostart_path,
-            upload_extension
+            upload_extension,
+            set_dialog_status
         ])
 
         // Manage State
