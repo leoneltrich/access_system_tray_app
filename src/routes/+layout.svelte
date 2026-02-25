@@ -6,6 +6,8 @@
     import {type} from '@tauri-apps/plugin-os';
     import {AuthService} from '$lib/services/auth';
     import {listen, type UnlistenFn} from "@tauri-apps/api/event";
+    import { extensionsEnabled } from '$lib/stores/settings';
+    import {SettingsService} from "$lib/services/settings";
 
     let {children} = $props();
 
@@ -18,6 +20,7 @@
 
         const setup = async () => {
             await AuthService.init();
+            await SettingsService.load();
 
             unlisten = await listen('tauri://focus', async () => {
                 console.log("App gained focus, re-validating session.");
@@ -73,9 +76,11 @@
                 <button class="nav-btn" onclick={goSettings} aria-label="Settings">
                     <Settings size={18}/>
                 </button>
-                <button class="nav-btn" onclick={goExtensions} aria-label="Extensions">
-                    <LayoutGrid size={18}/>
-                </button>
+                {#if $extensionsEnabled}
+                    <button class="nav-btn" onclick={goExtensions} aria-label="Extensions">
+                        <LayoutGrid size={18}/>
+                    </button>
+                {/if}
             {/if}
         </div>
 

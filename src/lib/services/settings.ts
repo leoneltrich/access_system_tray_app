@@ -7,10 +7,11 @@ import {
     serverUrl,
     isSettingsLoaded,
     autoStartEnabled,
-    DEFAULT_URL
+    DEFAULT_URL, extensionsEnabled
 } from '$lib/stores/settings';
 
 const KEY_SERVER_URL = 'server_url';
+const KEY_EXTENSIONS_ENABLED = 'extensions_enabled';
 
 export const SettingsService = {
 
@@ -20,13 +21,15 @@ export const SettingsService = {
      */
     async load() {
         try {
-            const [urlVal, autoStartVal] = await Promise.all([
+            const [urlVal, autoStartVal, extensionsVal] = await Promise.all([
                 db.get<string>(KEY_SERVER_URL),
-                isEnabled().catch(() => false) // Fail safe if plugin missing
+                isEnabled().catch(() => false),
+                db.get<boolean>(KEY_EXTENSIONS_ENABLED)
             ]);
 
             serverUrl.set(urlVal || DEFAULT_URL);
-            autoStartEnabled.set(autoStartVal);
+            autoStartEnabled.set(!!autoStartVal);
+            extensionsEnabled.set(!!extensionsVal);
 
         } catch (err) {
             console.error("[SettingsService] Load failed:", err);
@@ -51,6 +54,29 @@ export const SettingsService = {
             await invoke('fix_autostart_path');
             autoStartEnabled.set(true);
             return true;
+        }
+    },
+
+    /**
+     * Toggles Extensions
+     * Updates: extensionsEnabled
+     */
+    async toggleExtensions(): Promise<boolean> {
+        try {
+            let current = false;
+            const unsubscribe = extensionsEnabled.subscribe(v => current = v);
+            unsubscribe();
+
+            const newValue = !current;
+
+            await db.set(KEY_EXTENSIONS_ENABLED, newValue);
+            await db.save();
+
+            extensionsEnabled.set(newValue);
+            return newValue;
+        } catch (err) {
+            console.error("[SettingsService] Toggle failed:", err);
+            return false;
         }
     },
 

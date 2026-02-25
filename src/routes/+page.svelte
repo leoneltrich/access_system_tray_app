@@ -6,7 +6,6 @@
     import {servers} from '$lib/stores/servers';
 
     import {ServerService} from '$lib/services/servers';
-    import {SettingsService} from "$lib/services/settings";
 
     import ServerCard from '$lib/components/dashboard/ServerCard.svelte';
     import {isAuthenticated} from "$lib/stores/auth";
@@ -17,7 +16,6 @@
     onMount(() => {
 
         const setup = async () => {
-            await SettingsService.load();
             await ServerService.load();
         }
 

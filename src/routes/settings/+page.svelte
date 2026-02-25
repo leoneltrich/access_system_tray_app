@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { serverUrl, isSettingsLoaded, autoStartEnabled } from '$lib/stores/settings';
+    import { serverUrl, isSettingsLoaded, autoStartEnabled, extensionsEnabled } from '$lib/stores/settings';
     import { SettingsService } from '$lib/services/settings';
 
     import Toggle from '$lib/components/ui/Toggle.svelte';
@@ -10,6 +10,7 @@
     let inputUrl = $state($serverUrl);
 
     let autoStartProcessing = $state(false);
+    let extensionsProcessing = $state(false);
     let isSaving = $state(false);
 
     let saveStatus = $state<'idle' | 'checking' | 'success' | 'error' | 'invalid'>('idle');
@@ -30,6 +31,19 @@
             console.error('Failed to toggle autostart', error);
         } finally {
             autoStartProcessing = false;
+        }
+    }
+
+    async function handleToggleExtensions() {
+        if (extensionsProcessing) return;
+        extensionsProcessing = true;
+
+        try {
+            await SettingsService.toggleExtensions();
+        } catch (error) {
+            console.error('Failed to toggle extensions', error);
+        } finally {
+            extensionsProcessing = false;
         }
     }
 
@@ -67,6 +81,21 @@
                         checked={$autoStartEnabled}
                         isLoading={autoStartProcessing}
                         onToggle={handleToggleAutoStart}
+                        ariaLabel="Run on Startup"
+                />
+            </div>
+
+            <hr class="divider" />
+
+            <div class="option-row">
+                <div class="option-text">
+                    <span class="label-text">Enable Extensions</span>
+                    <span class="subtitle">Activate extensions and micro-apps.</span>
+                </div>
+                <Toggle
+                        checked={$extensionsEnabled}
+                        isLoading={autoStartProcessing}
+                        onToggle={handleToggleExtensions}
                         ariaLabel="Run on Startup"
                 />
             </div>
@@ -115,9 +144,10 @@
 
 <style>
     .view-body { flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
-    .settings-form { display: flex; flex-direction: column; flex: 1; }
+    .settings-form { display: flex; flex-direction: column; flex: 1;}
 
-    .option-row { display: flex; justify-content: space-between; align-items: center; min-height: 30px; gap: 0.5rem}
+    .section-group { display: flex; flex-direction: column; gap: 1rem; }
+    .option-row { display: flex; justify-content: space-between; align-items: center; min-height: 30px; gap: 1rem}
     .option-text { display: flex; flex-direction: column; gap: 4px; }
     .label-text { font-size: 0.9rem; font-weight: 500; }
     .subtitle { font-size: 0.75rem; color: #888; }
