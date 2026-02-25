@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from 'svelte';
-    import {Settings, X, User} from 'lucide-svelte';
+    import {Settings, X, User, LayoutGrid} from 'lucide-svelte';
     import {goto} from '$app/navigation';
     import {page} from '$app/state';
     import {type} from '@tauri-apps/plugin-os';
@@ -52,6 +52,10 @@
     function goProfile() {
         goto('/login');
     }
+
+    function goExtensions() {
+        goto('/extensions');
+    }
 </script>
 
 <div class="window-wrapper" class:platform-mac={isMac}>
@@ -68,6 +72,9 @@
                 </button>
                 <button class="nav-btn" onclick={goSettings} aria-label="Settings">
                     <Settings size={18}/>
+                </button>
+                <button class="nav-btn" onclick={goExtensions} aria-label="Extensions">
+                    <LayoutGrid size={18}/>
                 </button>
             {/if}
         </div>
@@ -92,7 +99,6 @@
         background-color: #111111;
     }
 
-    /* --- LAYOUT WRAPPER --- */
     .window-wrapper {
         width: 100vw;
         height: 100vh;
@@ -103,7 +109,6 @@
         background-color: transparent;
     }
 
-    /* --- APP CONTAINER --- */
     .app-container {
         flex: 1;
         display: flex;
@@ -122,23 +127,25 @@
         padding: 1.5rem;
     }
 
-    /* ========================================= */
-    /* MAC-SPECIFIC OVERRIDES                    */
-    /* ========================================= */
-
-    :global(html:has(.platform-mac)),
-    :global(body:has(.platform-mac)) {
-        background: transparent !important;
+    :global(.primary-action-btn) {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: #ffffff;
+        color: #000000;
+        border: none;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
     }
 
-    .window-wrapper.platform-mac {
-        padding: 12px;
-    }
-
-    .window-wrapper.platform-mac .app-container {
-        border-radius: 16px;
-        border: none !important;
-        box-shadow: none !important;
+    :global(.primary-action-btn:hover) {
+        background: #f0f0f0;
     }
 
     /* --- NAVIGATION --- */
@@ -165,5 +172,24 @@
     .nav-btn:hover {
         color: #ffffff;
         background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* ========================================= */
+    /* MAC-SPECIFIC OVERRIDES                    */
+    /* ========================================= */
+
+    :global(html:has(.platform-mac)),
+    :global(body:has(.platform-mac)) {
+        background: transparent !important;
+    }
+
+    .window-wrapper.platform-mac {
+        padding: 12px;
+    }
+
+    .window-wrapper.platform-mac .app-container {
+        border-radius: 16px;
+        border: none !important;
+        box-shadow: none !important;
     }
 </style>

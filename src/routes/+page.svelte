@@ -27,7 +27,6 @@
         }
     });
 
-    // eslint-disable-next-line no-labels
     $: handleServerPolling($isAuthenticated);
 
     function handleServerPolling(authenticated: boolean) {
