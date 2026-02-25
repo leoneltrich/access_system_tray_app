@@ -76,6 +76,59 @@ fn construct_extensions_dir_path<R: Runtime>(app: AppHandle<R>) -> Result<PathBu
     Ok(extensions_dir)
 }
 
+#[derive(serde::Serialize)]
+pub struct ExtensionInfo {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+}
+
+#[tauri::command]
+pub async fn list_extensions<R: Runtime>(app: AppHandle<R>) -> Result<Vec<ExtensionInfo>, String> {
+    let extensions_dir = construct_extensions_dir_path(app)?;
+    
+    if !extensions_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut list = Vec::new();
+
+    for entry in fs::read_dir(extensions_dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+
+        if path.is_file() {
+            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                list.push(ExtensionInfo {
+                    id: filename.to_string(),
+                    name: get_base_name(filename),
+                    version: get_version(filename),
+                });
+            }
+        }
+    }
+
+    // Sort alphabetically by name
+    list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+    Ok(list)
+}
+
+fn get_version(full_file_name: &str) -> String {
+    let path = PathBuf::from(full_file_name);
+    let file_stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(full_file_name);
+
+    if let Some(index) = file_stem.rfind(VERSION_SEPARATOR) {
+        // Extract everything after the separator
+        file_stem[index + VERSION_SEPARATOR.len()..].trim().to_string()
+    } else {
+        "unknown".to_string()
+    }
+}
+
 fn get_base_name(full_file_name: &str) -> String {
     let path = PathBuf::from(full_file_name);
 

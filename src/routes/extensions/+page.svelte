@@ -1,11 +1,27 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import PageView from '$lib/components/ui/PageView.svelte';
-    import {Puzzle, CircleX, CircleCheckBig} from 'lucide-svelte'; // Added CheckCircle and XCircle for feedback
-    import { ExtensionService } from '$lib/services/extensions'; // Import the new service
+    import { Puzzle, CircleCheckBig, CircleX } from 'lucide-svelte';
+    import { ExtensionService, type Extension } from '$lib/services/extensions';
+    import ExtensionCard from '$lib/components/dashboard/ExtensionCard.svelte';
 
     let isLoading = $state(false);
     let uploadError = $state<string | null>(null);
     let uploadSuccess = $state<string | null>(null);
+    
+    let extensions = $state<Extension[]>([]);
+
+    async function refreshExtensions() {
+        try {
+            extensions = await ExtensionService.list();
+        } catch (err) {
+            console.error("Failed to load extensions:", err);
+        }
+    }
+
+    onMount(() => {
+        refreshExtensions();
+    });
 
     async function handleAddExtension() {
         isLoading = true;
@@ -15,7 +31,7 @@
         try {
             const uploadedFileName = await ExtensionService.add();
             uploadSuccess = `Extension '${uploadedFileName}' uploaded successfully!`;
-            // You'll want to refresh your list of extensions here later
+            await refreshExtensions(); // Refresh the list after upload
         } catch (err: any) {
             console.error("Error adding extension:", err);
             uploadError = err.message || "An unknown error occurred during upload.";
@@ -23,10 +39,20 @@
             isLoading = false;
         }
     }
+
+    function handleRun(id: string) {
+        console.log("Running extension:", id);
+        // TODO: Implement execution logic
+    }
+
+    function handleDelete(id: string) {
+        console.log("Deleting extension:", id);
+        // TODO: Implement deletion logic
+    }
 </script>
 
 <PageView title="Extensions">
-    <div class="extension-view-body"> <!-- Use a dedicated class for this page's body -->
+    <div class="extension-view-body">
         {#if uploadSuccess}
             <div class="upload-feedback success">
                 <CircleCheckBig size={20}/>
@@ -40,10 +66,22 @@
             </div>
         {/if}
 
-        <div class="empty-state">
-            <p>No extensions installed.</p>
-            <span class="hint">Click the button below to add one.</span>
-        </div>
+        {#if extensions.length === 0}
+            <div class="empty-state">
+                <p>No extensions installed.</p>
+                <span class="hint">Click the button below to add one.</span>
+            </div>
+        {:else}
+            <div class="extension-grid">
+                {#each extensions as extension (extension.id)}
+                    <ExtensionCard 
+                        {extension} 
+                        onrun={handleRun}
+                        ondelete={handleDelete}
+                    />
+                {/each}
+            </div>
+        {/if}
     </div>
 
     {#snippet footer()}
@@ -65,13 +103,27 @@
 
 <style>
     .extension-view-body {
-        flex: 1; /* Make it take available space */
+        flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 1rem; /* Space between feedback and empty state */
+        gap: 1.25rem;
     }
+
+    .extension-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+        overflow-y: auto;
+        padding-bottom: 1rem;
+        scrollbar-width: none;
+    }
+
+    .extension-grid::-webkit-scrollbar {
+        display: none;
+    }
+
     .empty-state {
-        flex: 1; /* Make empty state take available space within its parent */
+        flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -95,14 +147,14 @@
     }
 
     .upload-feedback.success {
-        background-color: rgba(46, 204, 113, 0.2); /* Green background */
-        color: #2ecc71; /* Green text */
-        border: 1px solid #2ecc71;
+        background-color: rgba(46, 204, 113, 0.1);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.2);
     }
 
     .upload-feedback.error {
-        background-color: rgba(231, 76, 60, 0.2); /* Red background */
-        color: #e74c3c; /* Red text */
-        border: 1px solid #e74c3c;
+        background-color: rgba(231, 76, 60, 0.1);
+        color: #e74c3c;
+        border: 1px solid rgba(231, 76, 60, 0.2);
     }
 </style>

@@ -3,6 +3,12 @@ import { readFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { basename } from '@tauri-apps/api/path'; // To get the filename from a path
 
+export interface Extension {
+    id: string;
+    name: string;
+    version: string;
+}
+
 export const ExtensionService = {
     /**
      * Opens a file dialog, reads the selected binary file, and uploads it as an extension.
@@ -55,5 +61,18 @@ export const ExtensionService = {
         }
     },
 
-    // Other extension-related methods will go here (list, run, delete, etc.)
+    /**
+     * Fetches the list of installed extensions from the backend.
+     * @returns {Promise<Extension[]>} A sorted list of extension info.
+     */
+    async list(): Promise<Extension[]> {
+        try {
+            return await invoke<Extension[]>('list_extensions');
+        } catch (error) {
+            console.error("Failed to list extensions:", error);
+            throw new Error(`Failed to list extensions: ${error}`);
+        }
+    },
+
+    // Other extension-related methods will go here (run, delete, etc.)
 };
