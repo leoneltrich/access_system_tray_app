@@ -53,7 +53,7 @@
         <div class="footer">
             <button
                     type="submit"
-                    class="action-btn primary"
+                    class="primary-action-btn disabled-btn"
                     disabled={isLoading || !serverId.trim()}
             >
                 {#if isLoading}Verifying...{:else}Add Server{/if}
@@ -70,9 +70,4 @@
     .content-wrapper { display: flex; flex-direction: column; gap: 1.5rem; }
     .footer { margin-top: auto; padding-top: 1rem; flex-shrink: 0; }
     .subtitle { margin: 0; color: #888; font-size: 0.9rem; line-height: 1.4; }
-
-    .action-btn { width: 100%; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: opacity 0.2s; }
-    .action-btn:hover { opacity: 0.9; }
-    .action-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-    .action-btn.primary { background: white; color: black; }
 </style>

@@ -95,7 +95,7 @@
             <div class="footer">
                 <button
                         type="submit"
-                        class="save-btn"
+                        class="primary-action-btn disabled-btn"
                         class:success={saveStatus === 'success'}
                         class:error={saveStatus === 'invalid' || saveStatus === 'error'}
                         class:checking={saveStatus === 'checking'}
@@ -130,12 +130,6 @@
     .success-msg { color: #10b981; font-size: 0.8rem; margin: 4px 0 0 2px; animation: fadeIn 0.3s ease; }
 
     .footer { margin-top: auto; }
-    .save-btn { width: 100%; background: #ffffff; color: #000000; border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; }
-    .save-btn:hover { opacity: 0.9; }
-    .save-btn:disabled { opacity: 0.7; cursor: wait; }
-    .save-btn.checking { background-color: #f59e0b; color: white; }
-    .save-btn.success { background-color: #10b981; color: white; }
-    .save-btn.error { background-color: #ef4444; color: white; }
 
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 0.8; } 100% { opacity: 0.5; } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }

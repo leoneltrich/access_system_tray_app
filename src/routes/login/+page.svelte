@@ -77,7 +77,7 @@
                 <div class="footer">
                     <button
                             type="submit"
-                            class="action-btn primary"
+                            class="primary-action-btn"
                             disabled={$authLoading}
                     >
                         {#if $authLoading}Signing in...{:else}Sign In{/if}
@@ -95,7 +95,7 @@
             </div>
 
             <div class="footer">
-                <button class="action-btn secondary" onclick={handleLogout}>
+                <button class="primary-action-btn secondary-action-btn" onclick={handleLogout}>
                     Sign Out
                 </button>
             </div>
@@ -168,32 +168,6 @@
         margin-top: auto;
         padding-top: 1rem;
         flex-shrink: 0;
-    }
-
-    .action-btn {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        border: none;
-        transition: opacity 0.2s;
-    }
-
-    .action-btn:hover {
-        opacity: 0.9;
-    }
-
-    .action-btn.primary {
-        background: white;
-        color: black;
-    }
-
-    .action-btn.secondary {
-        background: #222;
-        border: 1px solid #333;
-        color: #ddd;
     }
 
     /* --- LOGGED IN ICONS --- */

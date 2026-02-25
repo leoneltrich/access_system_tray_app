@@ -148,6 +148,18 @@
         background: #f0f0f0;
     }
 
+    :global(.secondary-action-btn) {
+        background: #222;
+        border: 1px solid #333;
+        color: #ddd;
+    }
+
+    :global(.disabled-btn:disabled) {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+
     /* --- NAVIGATION --- */
     .nav-actions {
         position: absolute;
