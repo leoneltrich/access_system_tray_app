@@ -10,6 +10,7 @@
 
     import ServerCard from '$lib/components/dashboard/ServerCard.svelte';
     import {isAuthenticated} from "$lib/stores/auth";
+    import PageView from "$lib/components/ui/PageView.svelte";
 
     let pollInterval: any;
 
@@ -51,69 +52,32 @@
 
 </script>
 
-<div class="view-content">
-    <div class="view-header">
-        <h2 class="view-title">Dashboard</h2>
-    </div>
+<PageView title="Dashboard">
+    {#if $servers.length === 0}
+        <div class="empty-state">
+            <p>No servers configured.</p>
+            <span class="hint">Click the + button below to add one.</span>
+        </div>
+    {:else}
+        <div class="grid-container">
+            {#each $servers as server (server.id)}
+                <ServerCard
+                        {server}
+                        ondelete={() => ServerService.remove(server.id)}
+                />
+            {/each}
+        </div>
+    {/if}
 
-    <div class="view-body">
-        {#if $servers.length === 0}
-            <div class="empty-state">
-                <p>No servers configured.</p>
-                <span class="hint">Click the + button below to add one.</span>
-            </div>
-        {:else}
-            <div class="grid-container">
-                {#each $servers as server (server.id)}
-                    <ServerCard
-                            {server}
-                            ondelete={() => ServerService.remove(server.id)}
-                    />
-                {/each}
-            </div>
-        {/if}
-    </div>
-
-    <div class="footer">
+    {#snippet footer()}
         <button class="add-server-btn" onclick={goAddServer}>
             <Plus size={18}/>
             <span>Add Server</span>
         </button>
-    </div>
-</div>
+    {/snippet}
+</PageView>
 
 <style>
-    .view-content {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        position: relative;
-    }
-
-    .view-header {
-        height: 2rem;
-        display: flex;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        flex-shrink: 0;
-    }
-
-    .view-title {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-    .view-body {
-        flex: 1;
-        overflow-y: auto;
-        padding-right: 4px;
-        scrollbar-width: none;
-    }
-
-    .view-body::-webkit-scrollbar {
-        display: none;
-    }
 
     .empty-state {
         height: 100%;
@@ -134,11 +98,6 @@
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 12px;
         padding-bottom: 1rem;
-    }
-
-    .footer {
-        margin-top: 1rem;
-        flex-shrink: 0;
     }
 
     .add-server-btn {
