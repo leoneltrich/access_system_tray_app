@@ -1,19 +1,23 @@
 <script lang="ts">
-    import { Play, Trash2, Info, Terminal } from 'lucide-svelte';
+    import { Play, Trash2, Info, Terminal, Square } from 'lucide-svelte';
     import type { Extension } from '$lib/services/extensions';
 
-    let { extension, onrun, ondelete } = $props<{
+    let { extension, isRunning = false, onrun, ondelete } = $props<{
         extension: Extension;
+        isRunning?: boolean;
         onrun: (id: string) => void;
         ondelete: (id: string) => void;
     }>();
 </script>
 
-<div class="extension-card">
+<div class="extension-card" class:active={isRunning}>
     <div class="card-content">
         <div class="card-header">
             <div class="icon-container">
                 <Terminal size={18} />
+                {#if isRunning}
+                    <div class="running-indicator"></div>
+                {/if}
             </div>
             
             <div class="info-anchor">
@@ -35,8 +39,12 @@
         
         <div class="card-footer">
             <button class="run-btn" onclick={() => onrun(extension.id)}>
-                <Play size={14} fill="currentColor" />
-                <span>Run</span>
+                {#if isRunning}
+                    <Square size={14} fill="currentColor" />
+                {:else}
+                    <Play size={14} fill="currentColor" />
+                {/if}
+                <span>{isRunning ? 'Stop' : 'Run'}</span>
             </button>
             <button class="delete-btn" onclick={() => ondelete(extension.id)} aria-label="Delete">
                 <Trash2 size={16} />
@@ -53,12 +61,21 @@
         border-radius: 12px;
         transition: all 0.2s ease;
         min-width: 0;
-        /* Removed overflow: hidden to allow tooltip to pop out */
+    }
+
+    .extension-card.active {
+        border-color: rgba(16, 185, 129, 0.2);
+        background: rgba(16, 185, 129, 0.02);
     }
 
     .extension-card:hover {
         border-color: #3a3a3a;
         background: #1a1a1a;
+    }
+
+    .extension-card.active:hover {
+        border-color: rgba(16, 185, 129, 0.4);
+        background: rgba(16, 185, 129, 0.04);
     }
 
     .card-content {
@@ -76,6 +93,7 @@
     }
 
     .icon-container {
+        position: relative;
         width: 32px;
         height: 32px;
         background: #222;
@@ -86,9 +104,31 @@
         color: #666;
     }
 
+    .running-indicator {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        border: 2px solid #161616;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
+
+    .extension-card.active .icon-container {
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.1);
+    }
+
     .extension-card:hover .icon-container {
         color: #aaa;
         background: #282828;
+    }
+
+    .extension-card.active:hover .icon-container {
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
     }
 
     /* --- TOOLTIP SYSTEM --- */
@@ -188,6 +228,11 @@
 
     .run-btn:hover {
         background: #fff;
+    }
+
+    .extension-card.active .run-btn {
+        background: #10b981;
+        color: #000;
     }
 
     .delete-btn {

@@ -10,6 +10,7 @@
     let uploadSuccess = $state<string | null>(null);
     
     let extensions = $state<Extension[]>([]);
+    let activeExtensions = $state<Set<string>>(new Set());
 
     async function refreshExtensions() {
         try {
@@ -42,7 +43,13 @@
 
     function handleRun(id: string) {
         console.log("Running extension:", id);
-        // TODO: Implement execution logic
+        // Simulate running for now
+        if (activeExtensions.has(id)) {
+            activeExtensions.delete(id);
+        } else {
+            activeExtensions.add(id);
+        }
+        activeExtensions = new Set(activeExtensions);
     }
 
     function handleDelete(id: string) {
@@ -76,6 +83,7 @@
                 {#each extensions as extension (extension.id)}
                     <ExtensionCard 
                         {extension} 
+                        isRunning={activeExtensions.has(extension.id)}
                         onrun={handleRun}
                         ondelete={handleDelete}
                     />
