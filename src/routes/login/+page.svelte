@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount} from 'svelte';
-    import {CircleCheck, Plus} from 'lucide-svelte';
+    import {CircleCheck} from 'lucide-svelte';
     import {isAuthenticated, authLoading, authError} from '$lib/stores/auth';
     import {AuthService} from '$lib/services/auth';
     import FormInput from '$lib/components/ui/FormInput.svelte';
@@ -35,53 +35,51 @@
 </script>
 
 <PageView title="Login">
-    <div class="view-body">
-        {#if !$isAuthenticated}
-            <form id="login-form" class="login-form" onsubmit={handleLogin}>
-                <div class="content-wrapper">
-                    <p class="subtitle">Please sign in to continue.</p>
+    {#if !$isAuthenticated}
+        <form id="login-form" class="login-form" onsubmit={handleLogin}>
+            <div class="content-wrapper">
+                <p class="subtitle">Please sign in to continue.</p>
 
-                    <div class="inputs-stack">
-                        <FormInput
-                                id="username"
-                                label="Username"
-                                hideLabel={true}
-                                placeholder="Username"
-                                bind:value={username}
-                                oninput={handleInput}
-                                autocomplete="username"
-                                disabled={$authLoading}
-                                error={showError ? true : undefined}
-                                required
-                        />
+                <div class="inputs-stack">
+                    <FormInput
+                            id="username"
+                            label="Username"
+                            hideLabel={true}
+                            placeholder="Username"
+                            bind:value={username}
+                            oninput={handleInput}
+                            autocomplete="username"
+                            disabled={$authLoading}
+                            error={showError ? true : undefined}
+                            required
+                    />
 
-                        <FormInput
-                                id="password"
-                                type="password"
-                                label="Password"
-                                hideLabel={true}
-                                placeholder="Password"
-                                bind:value={password}
-                                oninput={handleInput}
-                                autocomplete="current-password"
-                                disabled={$authLoading}
-                                error={showError ? $authError : undefined}
-                                required
-                        />
-                    </div>
+                    <FormInput
+                            id="password"
+                            type="password"
+                            label="Password"
+                            hideLabel={true}
+                            placeholder="Password"
+                            bind:value={password}
+                            oninput={handleInput}
+                            autocomplete="current-password"
+                            disabled={$authLoading}
+                            error={showError ? $authError : undefined}
+                            required
+                    />
                 </div>
-            </form>
-
-        {:else}
-            <div class="content-wrapper centered">
-                <div class="success-icon">
-                    <CircleCheck size={48} color="#10b981"/>
-                </div>
-                <h3>Authenticated</h3>
-                <p>You are logged in securely.</p>
             </div>
-        {/if}
-    </div>
+        </form>
+
+    {:else}
+        <div class="content-wrapper centered">
+            <div class="success-icon">
+                <CircleCheck size={48} color="#10b981"/>
+            </div>
+            <h3>Authenticated</h3>
+            <p>You are logged in securely.</p>
+        </div>
+    {/if}
 
     {#snippet footer()}
         {#if !$isAuthenticated}

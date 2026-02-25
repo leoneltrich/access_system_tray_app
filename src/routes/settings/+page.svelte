@@ -5,6 +5,7 @@
 
     import Toggle from '$lib/components/ui/Toggle.svelte';
     import FormInput from '$lib/components/ui/FormInput.svelte';
+    import PageView from "$lib/components/ui/PageView.svelte";
 
     let inputUrl = $state($serverUrl);
 
@@ -54,9 +55,7 @@
     }
 </script>
 
-<div class="view-content">
-    <div class="view-header"><h2 class="view-title">Configuration</h2></div>
-
+<PageView title="Configuration">
     <div class="view-body">
         <div class="section-group">
             <div class="option-row">
@@ -75,7 +74,7 @@
 
         <hr class="divider" />
 
-        <form class="settings-form" onsubmit={handleSave}>
+        <form class="settings-form" id="settings-form" onsubmit={handleSave}>
             {#if !$isSettingsLoaded}
                 <div class="skeleton-input"></div>
             {:else}
@@ -91,26 +90,33 @@
                     <p class="success-msg">{statusMessage}</p>
                 {/if}
             {/if}
-
-            <div class="footer">
-                <button
-                        type="submit"
-                        class="primary-action-btn disabled-btn"
-                        class:success={saveStatus === 'success'}
-                        class:error={saveStatus === 'invalid' || saveStatus === 'error'}
-                        class:checking={saveStatus === 'checking'}
-                        disabled={isSaving || !$isSettingsLoaded}
-                >
-                    {#if saveStatus === 'checking'} Verifying...
-                    {:else if saveStatus === 'success'} Saved!
-                    {:else if saveStatus === 'invalid'} Invalid URL
-                    {:else if saveStatus === 'error'} Connection Failed
-                    {:else} Save Changes
-                    {/if}
-                </button>
-            </div>
         </form>
     </div>
+
+    {#snippet footer()}
+        <button
+                type="submit"
+                form="settings-form"
+                class="primary-action-btn disabled-btn"
+                class:success={saveStatus === 'success'}
+                class:error={saveStatus === 'invalid' || saveStatus === 'error'}
+                class:checking={saveStatus === 'checking'}
+                disabled={isSaving || !$isSettingsLoaded}
+        >
+            {#if saveStatus === 'checking'} Verifying...
+            {:else if saveStatus === 'success'} Saved!
+            {:else if saveStatus === 'invalid'} Invalid URL
+            {:else if saveStatus === 'error'} Connection Failed
+            {:else} Save Changes
+            {/if}
+        </button>
+    {/snippet}
+</PageView>
+
+<div class="view-content">
+    <div class="view-header"><h2 class="view-title">Configuration</h2></div>
+
+
 </div>
 
 <style>
@@ -128,8 +134,6 @@
 
     .skeleton-input { height: 60px; background: rgba(255,255,255,0.05); border-radius: 8px; animation: pulse 1.5s infinite; }
     .success-msg { color: #10b981; font-size: 0.8rem; margin: 4px 0 0 2px; animation: fadeIn 0.3s ease; }
-
-    .footer { margin-top: auto; }
 
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 0.8; } 100% { opacity: 0.5; } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
