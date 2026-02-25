@@ -1,9 +1,10 @@
 <script lang="ts">
     import {onMount} from 'svelte';
-    import {CircleCheck} from 'lucide-svelte';
+    import {CircleCheck, Plus} from 'lucide-svelte';
     import {isAuthenticated, authLoading, authError} from '$lib/stores/auth';
     import {AuthService} from '$lib/services/auth';
     import FormInput from '$lib/components/ui/FormInput.svelte';
+    import PageView from "$lib/components/ui/PageView.svelte";
 
     let username = $state("");
     let password = $state("");
@@ -33,14 +34,10 @@
     }
 </script>
 
-<div class="view-content">
-    <div class="view-header">
-        <h2 class="view-title">Login</h2>
-    </div>
-
+<PageView title="Login">
     <div class="view-body">
         {#if !$isAuthenticated}
-            <form class="login-form" onsubmit={handleLogin}>
+            <form id="login-form" class="login-form" onsubmit={handleLogin}>
                 <div class="content-wrapper">
                     <p class="subtitle">Please sign in to continue.</p>
 
@@ -73,16 +70,6 @@
                         />
                     </div>
                 </div>
-
-                <div class="footer">
-                    <button
-                            type="submit"
-                            class="primary-action-btn"
-                            disabled={$authLoading}
-                    >
-                        {#if $authLoading}Signing in...{:else}Sign In{/if}
-                    </button>
-                </div>
             </form>
 
         {:else}
@@ -93,44 +80,28 @@
                 <h3>Authenticated</h3>
                 <p>You are logged in securely.</p>
             </div>
-
-            <div class="footer">
-                <button class="primary-action-btn secondary-action-btn" onclick={handleLogout}>
-                    Sign Out
-                </button>
-            </div>
         {/if}
-
     </div>
-</div>
+
+    {#snippet footer()}
+        {#if !$isAuthenticated}
+            <button
+                    form="login-form"
+                    type="submit"
+                    class="primary-action-btn"
+                    disabled={$authLoading}
+            >
+                {#if $authLoading}Signing in...{:else}Sign In{/if}
+            </button>
+        {:else}
+            <button class="primary-action-btn secondary-action-btn" onclick={handleLogout}>
+                Sign Out
+            </button>
+        {/if}
+    {/snippet}
+</PageView>
 
 <style>
-    /* --- LAYOUT --- */
-    .view-content {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
-
-    .view-header {
-        height: 2rem;
-        display: flex;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-shrink: 0;
-    }
-
-    .view-title {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-    .view-body {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
 
     .login-form {
         display: flex;
@@ -163,14 +134,6 @@
         font-size: 0.9rem;
     }
 
-    /* --- FOOTER --- */
-    .footer {
-        margin-top: auto;
-        padding-top: 1rem;
-        flex-shrink: 0;
-    }
-
-    /* --- LOGGED IN ICONS --- */
     .success-icon {
         background: rgba(16, 185, 129, 0.1);
         padding: 1rem;
