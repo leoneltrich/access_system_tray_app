@@ -3,7 +3,7 @@
     import PageView from '$lib/components/ui/PageView.svelte';
     import { Puzzle, CircleCheckBig, CircleX } from 'lucide-svelte';
     import { ExtensionService, type Extension } from '$lib/services/extensions';
-    import ExtensionCard from '$lib/components/dashboard/ExtensionCard.svelte';
+    import ExtensionCard from '$lib/components/extensions/ExtensionCard.svelte';
 
     let isLoading = $state(false);
     let uploadError = $state<string | null>(null);
@@ -111,10 +111,10 @@
 
     .extension-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
         overflow-y: auto;
-        padding-bottom: 1rem;
+        padding-bottom: 2rem;
         scrollbar-width: none;
     }
 
