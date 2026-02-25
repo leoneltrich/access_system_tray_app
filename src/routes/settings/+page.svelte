@@ -113,16 +113,7 @@
     {/snippet}
 </PageView>
 
-<div class="view-content">
-    <div class="view-header"><h2 class="view-title">Configuration</h2></div>
-
-
-</div>
-
 <style>
-    .view-content { display: flex; flex-direction: column; height: 100%; color: white; }
-    .view-header { height: 2rem; display: flex; align-items: center; margin-bottom: 1.5rem; }
-    .view-title { margin: 0; font-size: 1.25rem; font-weight: 600; line-height: 1; }
     .view-body { flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
     .settings-form { display: flex; flex-direction: column; flex: 1; }
 
