@@ -8,26 +8,27 @@ use std::sync::atomic::Ordering;
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 
-// Import our new modules
 use state::AppState;
 use ui::definitions::WindowType;
 
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 use crate::api::system::fix_autostart_path;
+use crate::api::extensions::upload_extension;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        // 1. Register Commands
+        // Register Commands
         .invoke_handler(tauri::generate_handler![
-            fix_autostart_path
+            fix_autostart_path,
+            upload_extension
         ])
 
-        // 2. Manage State
+        // Manage State
         .manage(AppState::new())
 
-        // 3. Register Plugins
+        // Register Plugins
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -37,23 +38,19 @@ pub fn run() {
             None,
         ))
 
-        // 4. Setup Hook (The Boot Sequence)
         .setup(|app| {
-            // 1. DO MUTABLE WORK FIRST
             #[cfg(target_os = "macos")]
             app.set_activation_policy(ActivationPolicy::Accessory);
 
-            // 2. NOW GET THE IMMUTABLE HANDLE
             let handle = app.handle();
 
-            // 3. PROCEED
             ui::tray::setup(handle)?;
             ui::windows::create(handle, WindowType::Dashboard)?;
 
             Ok(())
         })
 
-        // 5. Run Loop & Exit Handling
+        // Run Loop & Exit Handling
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
