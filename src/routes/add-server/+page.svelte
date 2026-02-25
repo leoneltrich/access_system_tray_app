@@ -3,6 +3,7 @@
     import { ServerService } from '$lib/services/servers';
     import { mapBackendError } from '$lib/utils';
     import FormInput from '$lib/components/ui/FormInput.svelte';
+    import PageView from "$lib/components/ui/PageView.svelte";
 
     let serverId = $state("");
     let isLoading = $state(false);
@@ -28,12 +29,8 @@
     }
 </script>
 
-<div class="view-content">
-    <div class="view-header">
-        <h2 class="view-title">Add Server</h2>
-    </div>
-
-    <form class="view-body" onsubmit={handleSubmit}>
+<PageView title="Add Server">
+    <form id="add-server-form" class="view-body" onsubmit={handleSubmit}>
         <div class="content-wrapper">
             <p class="subtitle">Enter the Server ID to verify and add it to your dashboard.</p>
 
@@ -49,25 +46,23 @@
                     autocomplete="off"
             />
         </div>
+    </form>
 
+    {#snippet footer()}
         <div class="footer">
             <button
                     type="submit"
+                    form="add-server-form"
                     class="primary-action-btn disabled-btn"
                     disabled={isLoading || !serverId.trim()}
             >
                 {#if isLoading}Verifying...{:else}Add Server{/if}
             </button>
         </div>
-    </form>
-</div>
+    {/snippet}
+</PageView>
 
 <style>
-    .view-content { display: flex; flex-direction: column; height: 100%; }
-    .view-header { height: 2rem; display: flex; align-items: center; margin-bottom: 2rem; flex-shrink: 0; }
-    .view-title { margin: 0; font-size: 1.25rem; font-weight: 600; }
-    .view-body { flex: 1; display: flex; flex-direction: column; }
     .content-wrapper { display: flex; flex-direction: column; gap: 1.5rem; }
-    .footer { margin-top: auto; padding-top: 1rem; flex-shrink: 0; }
     .subtitle { margin: 0; color: #888; font-size: 0.9rem; line-height: 1.4; }
 </style>
