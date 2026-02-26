@@ -95,13 +95,13 @@
     <div class="extension-view-body">
         {#if uploadSuccess}
             <div class="upload-feedback success">
-                <CircleCheckBig size={20}/>
+                <CircleCheckBig size={15}/>
                 <span>{uploadSuccess}</span>
             </div>
         {/if}
         {#if uploadError}
             <div class="upload-feedback error">
-                <CircleX size={20}/>
+                <CircleX size={15}/>
                 <span>{uploadError}</span>
             </div>
         {/if}
@@ -181,22 +181,40 @@
 
     .upload-feedback {
         display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-size: 0.9rem;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        line-height: 1.2;
+        animation: fadeInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .upload-feedback :global(svg) {
+        flex-shrink: 0;
+        margin-top: 1px;
     }
 
     .upload-feedback.success {
-        background-color: rgba(46, 204, 113, 0.1);
-        color: #2ecc71;
-        border: 1px solid rgba(46, 204, 113, 0.2);
+        background-color: rgba(16, 185, 129, 0.08);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.15);
     }
 
     .upload-feedback.error {
-        background-color: rgba(231, 76, 60, 0.1);
-        color: #e74c3c;
-        border: 1px solid rgba(231, 76, 60, 0.2);
+        background-color: rgba(239, 68, 68, 0.08);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.15);
     }
 </style>
