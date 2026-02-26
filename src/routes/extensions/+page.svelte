@@ -24,7 +24,6 @@
     onMount(() => {
         refreshExtensions();
         
-        // Polling: Update the UI every second to reflect process status
         const interval = setInterval(() => {
             refreshExtensions();
         }, 1000);
@@ -63,13 +62,12 @@
                 try {
                     await ExtensionService.run(id);
                     
-                    // Trigger visual feedback
                     triggeredExtensions.add(id);
                     triggeredExtensions = new Set(triggeredExtensions);
                     setTimeout(() => {
                         triggeredExtensions.delete(id);
                         triggeredExtensions = new Set(triggeredExtensions);
-                    }, 1000); // Wait 1s as requested before showing actual state
+                    }, 1000);
 
                 } finally {
                     await invoke('set_dialog_status', { isOpen: false });
@@ -149,6 +147,7 @@
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+        height: 100%;
     }
 
     .extension-grid {

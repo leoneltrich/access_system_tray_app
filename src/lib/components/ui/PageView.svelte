@@ -44,6 +44,8 @@
         flex: 1;
         overflow-y: auto;
         scrollbar-width: none;
+        display: flex;
+        flex-direction: column;
     }
 
     .view-body::-webkit-scrollbar {
