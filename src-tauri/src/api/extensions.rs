@@ -5,6 +5,62 @@ use tauri::{AppHandle, Manager, Runtime, State};
 
 const VERSION_SEPARATOR: &str = " - ";
 
+#[derive(serde::Serialize)]
+pub struct ExtensionInfo {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub is_running: bool,
+}
+
+#[tauri::command]
+pub async fn list_extensions<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Vec<ExtensionInfo>, String> { // TODO Refactor this
+    let extensions_dir = construct_extensions_dir_path(app)?;
+
+    if !extensions_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut list = Vec::new();
+    let mut running = state.running_extensions.lock().unwrap();
+
+    for entry in fs::read_dir(extensions_dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+
+        if path.is_file() {
+            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                let id = filename.to_string();
+                let mut is_running = false;
+
+                if let Some(child) = running.get_mut(&id) {
+                    match child.try_wait() {
+                        Ok(None) => is_running = true,
+                        _ => {
+                            running.remove(&id);
+                        }
+                    }
+                }
+
+                list.push(ExtensionInfo {
+                    id: filename.to_string(),
+                    name: get_base_name(filename),
+                    version: get_version(filename),
+                    is_running,
+                });
+            }
+        }
+    }
+
+    // Sort alphabetically by name
+    list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+    Ok(list)
+}
+
 #[tauri::command]
 pub async fn upload_extension<R: Runtime>(
     app: AppHandle<R>,
@@ -83,6 +139,15 @@ pub async fn stop_extension<R: Runtime>(
 
     Ok(())
 }
+/**
+Cleans up by stopping all extensions before the app exits
+**/
+pub fn cleanup_processes(state: &AppState) {
+    let mut running = state.running_extensions.lock().unwrap();
+    for (id, mut child) in running.drain() {
+        let _ = child.kill();
+    }
+}
 
 /**
 Ensures that only a single version of an extension is installed.
@@ -124,44 +189,6 @@ fn construct_extensions_dir_path<R: Runtime>(app: AppHandle<R>) -> Result<PathBu
 
     extensions_dir.push("Extensions");
     Ok(extensions_dir)
-}
-
-#[derive(serde::Serialize)]
-pub struct ExtensionInfo {
-    pub id: String,
-    pub name: String,
-    pub version: String,
-}
-
-#[tauri::command]
-pub async fn list_extensions<R: Runtime>(app: AppHandle<R>) -> Result<Vec<ExtensionInfo>, String> {
-    let extensions_dir = construct_extensions_dir_path(app)?;
-
-    if !extensions_dir.exists() {
-        return Ok(Vec::new());
-    }
-
-    let mut list = Vec::new();
-
-    for entry in fs::read_dir(extensions_dir).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-
-        if path.is_file() {
-            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                list.push(ExtensionInfo {
-                    id: filename.to_string(),
-                    name: get_base_name(filename),
-                    version: get_version(filename),
-                });
-            }
-        }
-    }
-
-    // Sort alphabetically by name
-    list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-
-    Ok(list)
 }
 
 fn get_version(full_file_name: &str) -> String {

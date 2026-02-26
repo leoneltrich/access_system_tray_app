@@ -11,10 +11,11 @@ use tauri_plugin_autostart::MacosLauncher;
 use state::AppState;
 use ui::definitions::WindowType;
 
+use crate::api::extensions::{cleanup_processes, list_extensions, run_extension, stop_extension, upload_extension};
+use crate::api::system::{fix_autostart_path, set_dialog_status};
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
-use crate::api::system::{fix_autostart_path, set_dialog_status};
-use crate::api::extensions::{upload_extension, list_extensions};
+use tauri::RunEvent::ExitRequested;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -24,12 +25,12 @@ pub fn run() {
             fix_autostart_path,
             upload_extension,
             list_extensions,
+            run_extension,
+            stop_extension,
             set_dialog_status
         ])
-
         // Manage State
         .manage(AppState::new())
-
         // Register Plugins
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -41,7 +42,6 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             None,
         ))
-
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(ActivationPolicy::Accessory);
@@ -53,18 +53,22 @@ pub fn run() {
 
             Ok(())
         })
-
         // Run Loop & Exit Handling
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
-            if let tauri::RunEvent::ExitRequested { api, .. } = event {
-                let state = app_handle.state::<AppState>();
+            let state = app_handle.state::<AppState>();
 
-                // Only allow exit if the explicit "Quit" button was clicked
-                if !state.is_quitting.load(Ordering::Relaxed) {
-                    api.prevent_exit();
+            match event {
+                ExitRequested { api, .. } => {
+                    if !state.is_quitting.load(Ordering::Relaxed) {
+                        api.prevent_exit();
+                    }
                 }
+                Exit => {
+                    cleanup_processes(&state);
+                }
+                _ => {}
             }
         });
 }
