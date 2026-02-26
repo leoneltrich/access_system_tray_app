@@ -69,7 +69,7 @@
                     setTimeout(() => {
                         triggeredExtensions.delete(id);
                         triggeredExtensions = new Set(triggeredExtensions);
-                    }, 2000);
+                    }, 1000); // Wait 1s as requested before showing actual state
 
                 } finally {
                     await invoke('set_dialog_status', { isOpen: false });

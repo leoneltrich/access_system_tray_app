@@ -10,12 +10,12 @@
         ondelete: (id: string) => void;
     }>();
 
-    // Determine the primary visual state
-    let showStop = $derived(isRunning);
-    let showLaunched = $derived(justTriggered && !isRunning);
+    // Prioritize "Launched" feedback for the first second
+    let showLaunched = $derived(justTriggered);
+    let showStop = $derived(isRunning && !justTriggered);
 </script>
 
-<div class="extension-card" class:active={isRunning} class:triggered={justTriggered}>
+<div class="extension-card" class:active={isRunning && !justTriggered} class:triggered={justTriggered}>
     <div class="card-content">
         <div class="card-header">
             <div class="icon-container">
