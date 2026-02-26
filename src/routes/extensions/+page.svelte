@@ -13,6 +13,17 @@
     let extensions = $state<Extension[]>([]);
     let triggeredExtensions = $state<Set<string>>(new Set());
 
+    // Auto-clear feedback messages after 2 seconds
+    $effect(() => {
+        if (uploadSuccess || uploadError) {
+            const timer = setTimeout(() => {
+                uploadSuccess = null;
+                uploadError = null;
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    });
+
     async function refreshExtensions() {
         try {
             extensions = await ExtensionService.list();
