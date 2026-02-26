@@ -1,28 +1,29 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { invoke } from '@tauri-apps/api/core';
+    import { listen } from '@tauri-apps/api/event';
     import PageView from '$lib/components/ui/PageView.svelte';
     import { Puzzle, CircleCheckBig, CircleX } from 'lucide-svelte';
     import { ExtensionService, type Extension } from '$lib/services/extensions';
     import ExtensionCard from '$lib/components/extensions/ExtensionCard.svelte';
 
+    type StatusMessage = { id: number; text: string; type: 'success' | 'error' };
+
     let isLoading = $state(false);
-    let uploadError = $state<string | null>(null);
-    let uploadSuccess = $state<string | null>(null);
+    let messages = $state<StatusMessage[]>([]);
+    let messageIdCounter = 0;
     
     let extensions = $state<Extension[]>([]);
     let triggeredExtensions = $state<Set<string>>(new Set());
 
-    // Auto-clear feedback messages after 2 seconds
-    $effect(() => {
-        if (uploadSuccess || uploadError) {
-            const timer = setTimeout(() => {
-                uploadSuccess = null;
-                uploadError = null;
-            }, 2000);
-            return () => clearTimeout(timer);
-        }
-    });
+    function addMessage(text: string, type: 'success' | 'error') {
+        const id = messageIdCounter++;
+        messages = [...messages, { id, text, type }];
+        
+        setTimeout(() => {
+            messages = messages.filter(m => m.id !== id);
+        }, 3000);
+    }
 
     async function refreshExtensions() {
         try {
@@ -39,23 +40,31 @@
             refreshExtensions();
         }, 1000);
 
+        let unlisten: () => void;
+
+        const setupCrashListener = async () => {
+            unlisten = await listen('extension-crash', (event) => {
+                addMessage(event.payload as string, 'error');
+            });
+        };
+
+        setupCrashListener();
+
         return () => {
             clearInterval(interval);
+            if (unlisten) unlisten();
         };
     });
 
     async function handleAddExtension() {
         isLoading = true;
-        uploadError = null;
-        uploadSuccess = null;
-
         try {
             const uploadedFileName = await ExtensionService.add();
-            uploadSuccess = `Extension '${uploadedFileName}' uploaded successfully!`;
-            await refreshExtensions(); // Refresh the list after upload
+            addMessage(`Extension '${uploadedFileName}' uploaded successfully!`, 'success');
+            await refreshExtensions();
         } catch (err: any) {
             console.error("Error adding extension:", err);
-            uploadError = err.message || "An unknown error occurred during upload.";
+            addMessage(err.message || "An unknown error occurred during upload.", 'error');
         } finally {
             isLoading = false;
         }
@@ -86,7 +95,7 @@
             }
             await refreshExtensions();
         } catch (err: any) {
-            uploadError = `Action failed: ${err}`;
+            addMessage(`Action failed: ${err}`, 'error');
         }
     }
 
@@ -95,23 +104,25 @@
             await ExtensionService.delete(id);
             await refreshExtensions();
         } catch (err: any) {
-            uploadError = `Delete failed: ${err}`;
+            addMessage(`Delete failed: ${err}`, 'error');
         }
     }
 </script>
 
 <PageView title="Extensions">
     <div class="extension-view-body">
-        {#if uploadSuccess}
-            <div class="upload-feedback success">
-                <CircleCheckBig size={15}/>
-                <span>{uploadSuccess}</span>
-            </div>
-        {/if}
-        {#if uploadError}
-            <div class="upload-feedback error">
-                <CircleX size={15}/>
-                <span>{uploadError}</span>
+        {#if messages.length > 0}
+            <div class="message-stack">
+                {#each messages as msg (msg.id)}
+                    <div class="upload-feedback" class:success={msg.type === 'success'} class:error={msg.type === 'error'}>
+                        {#if msg.type === 'success'}
+                            <CircleCheckBig size={15}/>
+                        {:else}
+                            <CircleX size={15}/>
+                        {/if}
+                        <span>{msg.text}</span>
+                    </div>
+                {/each}
             </div>
         {/if}
 
@@ -159,6 +170,13 @@
         flex-direction: column;
         gap: 1.25rem;
         height: 100%;
+    }
+
+    .message-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-shrink: 0;
     }
 
     .extension-grid {

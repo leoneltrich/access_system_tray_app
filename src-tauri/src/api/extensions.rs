@@ -1,7 +1,7 @@
 use crate::state::AppState;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 const VERSION_SEPARATOR: &str = " - ";
 
@@ -19,7 +19,7 @@ pub async fn list_extensions<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
 ) -> Result<Vec<ExtensionInfo>, String> { // TODO Refactor this
-    let extensions_dir = construct_extensions_dir_path(app)?;
+    let extensions_dir = construct_extensions_dir_path(app.clone())?;
 
     if !extensions_dir.exists() {
         return Ok(Vec::new());
@@ -40,6 +40,13 @@ pub async fn list_extensions<R: Runtime>(
                 if let Some(child) = running.get_mut(&id) {
                     match child.try_wait() {
                         Ok(None) => is_running = true,
+                        Ok(Some(status)) => {
+                            if !status.success() {
+                                let name = get_base_name(filename);
+                                let _ = app.emit("extension-crash", format!("Extension '{}' exited with an error.", name));
+                            }
+                            running.remove(&id);
+                        },
                         _ => {
                             running.remove(&id);
                         }
