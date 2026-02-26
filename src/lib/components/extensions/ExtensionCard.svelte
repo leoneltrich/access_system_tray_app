@@ -231,8 +231,12 @@
     }
 
     .extension-card.active .run-btn {
-        background: #10b981;
-        color: #000;
+        background: #ef4444;
+        color: #fff;
+    }
+
+    .extension-card.active .run-btn:hover {
+        background: #f87171;
     }
 
     .delete-btn {
