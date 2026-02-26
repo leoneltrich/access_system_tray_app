@@ -11,11 +11,11 @@ use tauri_plugin_autostart::MacosLauncher;
 use state::AppState;
 use ui::definitions::WindowType;
 
-use crate::api::extensions::{cleanup_processes, list_extensions, run_extension, stop_extension, upload_extension};
+use crate::api::extensions::{cleanup_processes, list_extensions, run_extension, stop_extension, upload_extension, delete_extension};
 use crate::api::system::{fix_autostart_path, set_dialog_status};
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
-use tauri::RunEvent::ExitRequested;
+use tauri::RunEvent::{Exit, ExitRequested};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,6 +27,7 @@ pub fn run() {
             list_extensions,
             run_extension,
             stop_extension,
+            delete_extension,
             set_dialog_status
         ])
         // Manage State

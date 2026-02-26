@@ -1,20 +1,30 @@
 <script lang="ts">
-    import { Play, Trash2, Info, Terminal, Square } from 'lucide-svelte';
+    import { Play, Trash2, Info, Terminal, Square, Check } from 'lucide-svelte';
     import type { Extension } from '$lib/services/extensions';
 
-    let { extension, isRunning = false, onrun, ondelete } = $props<{
+    let { extension, isRunning = false, justTriggered = false, onrun, ondelete } = $props<{
         extension: Extension;
         isRunning?: boolean;
+        justTriggered?: boolean;
         onrun: (id: string) => void;
         ondelete: (id: string) => void;
     }>();
+
+    // Determine the primary visual state
+    let showStop = $derived(isRunning);
+    let showLaunched = $derived(justTriggered && !isRunning);
 </script>
 
-<div class="extension-card" class:active={isRunning}>
+<div class="extension-card" class:active={isRunning} class:triggered={justTriggered}>
     <div class="card-content">
         <div class="card-header">
             <div class="icon-container">
-                <Terminal size={18} />
+                {#if showLaunched}
+                    <Check size={18} class="success-check" />
+                {:else}
+                    <Terminal size={18} />
+                {/if}
+                
                 {#if isRunning}
                     <div class="running-indicator"></div>
                 {/if}
@@ -39,12 +49,16 @@
         
         <div class="card-footer">
             <button class="run-btn" onclick={() => onrun(extension.id)}>
-                {#if isRunning}
+                {#if showStop}
                     <Square size={14} fill="currentColor" />
+                    <span>Stop</span>
+                {:else if showLaunched}
+                    <Check size={14} />
+                    <span>Launched</span>
                 {:else}
                     <Play size={14} fill="currentColor" />
+                    <span>Run</span>
                 {/if}
-                <span>{isRunning ? 'Stop' : 'Run'}</span>
             </button>
             <button class="delete-btn" onclick={() => ondelete(extension.id)} aria-label="Delete">
                 <Trash2 size={16} />
@@ -59,23 +73,24 @@
         background: #161616;
         border: 1px solid #262626;
         border-radius: 12px;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         min-width: 0;
     }
 
+    /* --- STATES --- */
     .extension-card.active {
-        border-color: rgba(16, 185, 129, 0.2);
+        border-color: rgba(16, 185, 129, 0.3);
         background: rgba(16, 185, 129, 0.02);
+    }
+
+    .extension-card.triggered:not(.active) {
+        border-color: #10b981;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
     }
 
     .extension-card:hover {
         border-color: #3a3a3a;
         background: #1a1a1a;
-    }
-
-    .extension-card.active:hover {
-        border-color: rgba(16, 185, 129, 0.4);
-        background: rgba(16, 185, 129, 0.04);
     }
 
     .card-content {
@@ -85,7 +100,7 @@
         gap: 12px;
     }
 
-    /* --- HEADER --- */
+    /* --- HEADER & ICONS --- */
     .card-header {
         display: flex;
         justify-content: space-between;
@@ -102,6 +117,17 @@
         align-items: center;
         justify-content: center;
         color: #666;
+        transition: all 0.2s;
+    }
+
+    .success-check {
+        color: #10b981;
+        animation: scaleIn 0.2s ease-out;
+    }
+
+    @keyframes scaleIn {
+        from { transform: scale(0.5); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
     }
 
     .running-indicator {
@@ -121,31 +147,10 @@
         background: rgba(16, 185, 129, 0.1);
     }
 
-    .extension-card:hover .icon-container {
-        color: #aaa;
-        background: #282828;
-    }
-
-    .extension-card.active:hover .icon-container {
-        color: #10b981;
-        background: rgba(16, 185, 129, 0.15);
-    }
-
-    /* --- TOOLTIP SYSTEM --- */
-    .info-anchor {
-        position: relative;
-    }
-
-    .info-trigger {
-        color: #444;
-        cursor: help;
-        padding: 4px;
-        transition: color 0.2s;
-    }
-
-    .info-trigger:hover {
-        color: #888;
-    }
+    /* --- TOOLTIP --- */
+    .info-anchor { position: relative; }
+    .info-trigger { color: #444; cursor: help; padding: 4px; transition: color 0.2s; }
+    .info-trigger:hover { color: #888; }
 
     .version-tooltip {
         visibility: hidden;
@@ -169,30 +174,13 @@
     }
 
     .info-anchor:hover .version-tooltip {
-        visibility: visible;
-        opacity: 1;
-        transform: translateY(0);
+        visibility: visible; opacity: 1; transform: translateY(0);
     }
 
-    .version-tooltip .label {
-        font-size: 0.6rem;
-        color: #666;
-        text-transform: uppercase;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-    }
-
-    .version-tooltip .value {
-        font-size: 0.75rem;
-        color: #ddd;
-        font-weight: 500;
-    }
+    .version-tooltip .label { font-size: 0.6rem; color: #666; font-weight: 700; text-transform: uppercase; }
+    .version-tooltip .value { font-size: 0.75rem; color: #ddd; font-weight: 500; }
 
     /* --- BODY --- */
-    .card-body {
-        min-width: 0;
-    }
-
     .extension-name {
         margin: 0;
         font-size: 0.95rem;
@@ -203,11 +191,8 @@
         text-overflow: ellipsis;
     }
 
-    /* --- FOOTER --- */
-    .card-footer {
-        display: flex;
-        gap: 8px;
-    }
+    /* --- FOOTER BUTTONS --- */
+    .card-footer { display: flex; gap: 8px; }
 
     .run-btn {
         flex: 1;
@@ -223,20 +208,19 @@
         font-size: 0.8rem;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all 0.2s;
     }
 
-    .run-btn:hover {
-        background: #fff;
-    }
+    .run-btn:hover:not(:disabled) { background: #fff; }
 
     .extension-card.active .run-btn {
         background: #ef4444;
         color: #fff;
     }
 
-    .extension-card.active .run-btn:hover {
-        background: #f87171;
+    .extension-card.triggered:not(.active) .run-btn {
+        background: #10b981;
+        color: #fff;
     }
 
     .delete-btn {

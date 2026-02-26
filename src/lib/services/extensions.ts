@@ -7,6 +7,7 @@ export interface Extension {
     id: string;
     name: string;
     version: string;
+    isRunning: boolean;
 }
 
 export const ExtensionService = {
@@ -74,5 +75,44 @@ export const ExtensionService = {
         }
     },
 
-    // Other extension-related methods will go here (run, delete, etc.)
+    /**
+     * Executes the extension binary.
+     * @param id The full filename of the extension.
+     */
+    async run(id: string): Promise<void> {
+        try {
+            await invoke('run_extension', { id });
+        } catch (error) {
+            console.error(`Failed to run extension ${id}:`, error);
+            throw new Error(`${error}`);
+        }
+    },
+
+    /**
+     * Terminates the extension binary.
+     * @param id The full filename of the extension.
+     */
+    async stop(id: string): Promise<void> {
+        try {
+            await invoke('stop_extension', { id });
+        } catch (error) {
+            console.error(`Failed to stop extension ${id}:`, error);
+            throw new Error(`${error}`);
+        }
+    },
+
+    /**
+     * Deletes the extension binary and stops it if running.
+     * @param id The full filename of the extension.
+     */
+    async delete(id: string): Promise<void> {
+        try {
+            await invoke('delete_extension', { id });
+        } catch (error) {
+            console.error(`Failed to delete extension ${id}:`, error);
+            throw new Error(`${error}`);
+        }
+    },
+
+    // Other extension-related methods will go here
 };

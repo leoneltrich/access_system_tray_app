@@ -6,6 +6,7 @@ use tauri::{AppHandle, Manager, Runtime, State};
 const VERSION_SEPARATOR: &str = " - ";
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtensionInfo {
     pub id: String,
     pub name: String,
@@ -94,7 +95,7 @@ pub async fn upload_extension<R: Runtime>(
 #[tauri::command]
 pub async fn run_extension<R: Runtime>(
     app: AppHandle<R>,
-    state: AppState,
+    state: State<'_, AppState>,
     id: String,
 ) -> Result<(), String> {
     let mut running = state.running_extensions.lock().unwrap();
@@ -124,7 +125,7 @@ pub async fn run_extension<R: Runtime>(
 }
 
 #[tauri::command]
-pub async fn stop_extension<R: Runtime>(
+pub async fn stop_extension(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<(), String> {
@@ -144,7 +145,7 @@ Cleans up by stopping all extensions before the app exits
 **/
 pub fn cleanup_processes(state: &AppState) {
     let mut running = state.running_extensions.lock().unwrap();
-    for (id, mut child) in running.drain() {
+    for (_id, mut child) in running.drain() {
         let _ = child.kill();
     }
 }
@@ -189,6 +190,30 @@ fn construct_extensions_dir_path<R: Runtime>(app: AppHandle<R>) -> Result<PathBu
 
     extensions_dir.push("Extensions");
     Ok(extensions_dir)
+}
+
+#[tauri::command]
+pub async fn delete_extension<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    // 1. Force stop if running
+    let mut running = state.running_extensions.lock().unwrap();
+    if let Some(mut child) = running.remove(&id) {
+        let _ = child.kill();
+    }
+    drop(running); // Release lock before I/O
+
+    // 2. Remove file
+    let mut path = construct_extensions_dir_path(app)?;
+    path.push(&id);
+
+    if path.exists() {
+        fs::remove_file(path).map_err(|e| format!("Failed to delete file: {}", e))?;
+    }
+
+    Ok(())
 }
 
 fn get_version(full_file_name: &str) -> String {

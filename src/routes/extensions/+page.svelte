@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { invoke } from '@tauri-apps/api/core';
     import PageView from '$lib/components/ui/PageView.svelte';
     import { Puzzle, CircleCheckBig, CircleX } from 'lucide-svelte';
     import { ExtensionService, type Extension } from '$lib/services/extensions';
@@ -10,7 +11,7 @@
     let uploadSuccess = $state<string | null>(null);
     
     let extensions = $state<Extension[]>([]);
-    let activeExtensions = $state<Set<string>>(new Set());
+    let triggeredExtensions = $state<Set<string>>(new Set());
 
     async function refreshExtensions() {
         try {
@@ -22,6 +23,15 @@
 
     onMount(() => {
         refreshExtensions();
+        
+        // Polling: Update the UI every second to reflect process status
+        const interval = setInterval(() => {
+            refreshExtensions();
+        }, 1000);
+
+        return () => {
+            clearInterval(interval);
+        };
     });
 
     async function handleAddExtension() {
@@ -41,20 +51,43 @@
         }
     }
 
-    function handleRun(id: string) {
-        console.log("Running extension:", id);
-        // Simulate running for now
-        if (activeExtensions.has(id)) {
-            activeExtensions.delete(id);
-        } else {
-            activeExtensions.add(id);
+    async function handleRun(id: string) {
+        const ext = extensions.find(e => e.id === id);
+        if (!ext) return;
+
+        try {
+            if (ext.isRunning) {
+                await ExtensionService.stop(id);
+            } else {
+                await invoke('set_dialog_status', { isOpen: true });
+                try {
+                    await ExtensionService.run(id);
+                    
+                    // Trigger visual feedback
+                    triggeredExtensions.add(id);
+                    triggeredExtensions = new Set(triggeredExtensions);
+                    setTimeout(() => {
+                        triggeredExtensions.delete(id);
+                        triggeredExtensions = new Set(triggeredExtensions);
+                    }, 2000);
+
+                } finally {
+                    await invoke('set_dialog_status', { isOpen: false });
+                }
+            }
+            await refreshExtensions();
+        } catch (err: any) {
+            uploadError = `Action failed: ${err}`;
         }
-        activeExtensions = new Set(activeExtensions);
     }
 
-    function handleDelete(id: string) {
-        console.log("Deleting extension:", id);
-        // TODO: Implement deletion logic
+    async function handleDelete(id: string) {
+        try {
+            await ExtensionService.delete(id);
+            await refreshExtensions();
+        } catch (err: any) {
+            uploadError = `Delete failed: ${err}`;
+        }
     }
 </script>
 
@@ -83,7 +116,8 @@
                 {#each extensions as extension (extension.id)}
                     <ExtensionCard 
                         {extension} 
-                        isRunning={activeExtensions.has(extension.id)}
+                        isRunning={extension.isRunning}
+                        justTriggered={triggeredExtensions.has(extension.id)}
                         onrun={handleRun}
                         ondelete={handleDelete}
                     />
