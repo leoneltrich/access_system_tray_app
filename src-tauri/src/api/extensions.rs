@@ -166,6 +166,7 @@ fn handle_single_version_constraint(name: &String, extensions_dir: &PathBuf) -> 
     Ok(())
 }
 
+#[cfg(unix)]
 fn set_permissions_unix(target_path: &mut PathBuf) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     let mut perms = fs::metadata(&target_path)
