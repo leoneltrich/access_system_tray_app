@@ -1,6 +1,7 @@
+use crate::state::AppState;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Manager, Runtime, State};
 
 const VERSION_SEPARATOR: &str = " - ";
 
@@ -30,6 +31,55 @@ pub async fn upload_extension<R: Runtime>(
 
     #[cfg(unix)]
     set_permissions_unix(&mut target_path)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn run_extension<R: Runtime>(
+    app: AppHandle<R>,
+    state: AppState,
+    id: String,
+) -> Result<(), String> {
+    let mut running = state.running_extensions.lock().unwrap();
+
+    if let Some(child) = running.get_mut(&id) {
+        match child.try_wait() {
+            Ok(None) => return Err(format!("Extension '{}' is already running", id)),
+            _ => {
+                running.remove(&id);
+            }
+        }
+    }
+
+    let mut path = construct_extensions_dir_path(app)?;
+    path.push(&id);
+
+    if !path.exists() {
+        return Err(format!("Extension '{}' not found", id));
+    }
+
+    let child = std::process::Command::new(&path)
+        .spawn()
+        .map_err(|e| format!("Failed to spawn extension '{}': {}", id, e))?;
+
+    running.insert(id, child);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn stop_extension<R: Runtime>(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    let mut running = state.running_extensions.lock().unwrap();
+
+    if let Some(mut child) = running.remove(&id) {
+        child.kill().map_err(|e| {
+            running.insert(id.clone(), child);
+            format!("Failed to kill extension '{}': {}", id, e)
+        })?;
+    }
 
     Ok(())
 }
@@ -86,7 +136,7 @@ pub struct ExtensionInfo {
 #[tauri::command]
 pub async fn list_extensions<R: Runtime>(app: AppHandle<R>) -> Result<Vec<ExtensionInfo>, String> {
     let extensions_dir = construct_extensions_dir_path(app)?;
-    
+
     if !extensions_dir.exists() {
         return Ok(Vec::new());
     }
@@ -123,7 +173,9 @@ fn get_version(full_file_name: &str) -> String {
 
     if let Some(index) = file_stem.rfind(VERSION_SEPARATOR) {
         // Extract everything after the separator
-        file_stem[index + VERSION_SEPARATOR.len()..].trim().to_string()
+        file_stem[index + VERSION_SEPARATOR.len()..]
+            .trim()
+            .to_string()
     } else {
         "unknown".to_string()
     }
