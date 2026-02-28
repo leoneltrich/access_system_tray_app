@@ -35,7 +35,6 @@ pub fn run() {
             get_access_token,
             get_refresh_token,
             purge_tokens,
-
         ])
         // Manage State
         .manage(AppState::new())
