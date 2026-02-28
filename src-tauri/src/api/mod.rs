@@ -1,3 +1,3 @@
 pub mod system;
 pub mod extensions;
-mod auth;
+pub(crate) mod auth;

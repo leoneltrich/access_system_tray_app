@@ -11,6 +11,7 @@ use tauri_plugin_autostart::MacosLauncher;
 use state::AppState;
 use ui::definitions::WindowType;
 
+use crate::api::auth::*;
 use crate::api::extensions::{cleanup_processes, list_extensions, run_extension, stop_extension, upload_extension, delete_extension};
 use crate::api::system::{fix_autostart_path, set_dialog_status};
 #[cfg(target_os = "macos")]
@@ -28,7 +29,13 @@ pub fn run() {
             run_extension,
             stop_extension,
             delete_extension,
-            set_dialog_status
+            set_dialog_status,
+            save_tokens,
+            get_tokens,
+            get_access_token,
+            get_refresh_token,
+            purge_tokens,
+
         ])
         // Manage State
         .manage(AppState::new())
