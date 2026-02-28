@@ -3436,11 +3436,10 @@ dependencies = [
 
 [[package]]
 name = "serve-me"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "keyring",
  "serde",
- "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
