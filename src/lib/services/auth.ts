@@ -3,8 +3,9 @@ import {api} from '$lib/services/api';
 import {isAuthenticated, authLoading, authError, authSession, type Session} from '$lib/stores/auth';
 import {mapBackendError} from "$lib/utils";
 import {get} from "svelte/store";
+import {invoke} from "@tauri-apps/api/core";
 
-const KEY_SESSION = 'user_session';
+const KEY_USERNAME = 'username';
 let isRefreshing = false;
 
 let logoutTimer: ReturnType<typeof setTimeout> | null = null;
@@ -23,7 +24,8 @@ export const AuthService = {
         if (logoutTimer) clearTimeout(logoutTimer);
 
         try {
-            const session = await db.get<Session>(KEY_SESSION);
+            const session = await getSession();
+            if (!session) return;
 
             if (session?.access_token && session.refresh_token && session.username) {
                 const exp = getJwtExpiration(session.access_token);
@@ -37,7 +39,7 @@ export const AuthService = {
                     console.log("[AuthService] Session restored.");
                 } else {
                     console.log("[AuthService] Access token expired. Attempting to refresh session...");
-                    await this.refreshToken(session.username, session.refresh_token);
+                    await refreshToken(session.username, session.refresh_token);
                 }
             }
         } catch (err) {
@@ -60,7 +62,7 @@ export const AuthService = {
             });
 
             if (data.access_token && data.refresh_token) {
-                await this.updateCredentials(data, username);
+                await updateCredentials(data, username);
 
                 const exp = getJwtExpiration(data.access_token);
                 if (exp) await scheduleAutoRefresh(exp);
@@ -77,45 +79,6 @@ export const AuthService = {
 
         } finally {
             authLoading.set(false);
-        }
-    },
-
-    async updateCredentials(data: LoginResponse, username: string) {
-        const session: Session = {
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            username: username
-        }
-
-        await db.set(KEY_SESSION, session);
-        await db.save();
-
-        authSession.set(session);
-        isAuthenticated.set(true);
-    },
-
-    async refreshToken(username: string, refresh_token: string) {
-        if (logoutTimer) clearTimeout(logoutTimer);
-        if (isRefreshing) return false;
-        isRefreshing = true;
-
-        try {
-            const data = await api.post<LoginResponse>('/token/refresh', {
-                username,
-                refresh_token
-            });
-
-            await this.updateCredentials(data, username);
-
-            const exp = getJwtExpiration(data.access_token);
-            if (exp) await scheduleAutoRefresh(exp);
-
-            return true;
-        } catch (err: any) {
-            console.error("[AuthService] Refresh failed:", err);
-            await this.logout();
-        } finally {
-            isRefreshing = false;
         }
     },
 
@@ -139,11 +102,13 @@ export const AuthService = {
             isAuthenticated.set(false);
             authSession.set(null);
 
-            await db.set(KEY_SESSION, null);
+            await db.set(KEY_USERNAME, null);
             await db.save();
+
+            await invoke('purge_tokens');
         }
     },
-};
+}
 
 async function scheduleAutoRefresh(expTimestamp: number) {
     if (logoutTimer) clearTimeout(logoutTimer);
@@ -155,9 +120,12 @@ async function scheduleAutoRefresh(expTimestamp: number) {
     if (timeLeft > 0) {
         logoutTimer = setTimeout(async () => {
             console.log("[AuthService] Token almost expired. Refreshing...");
-            const authData = await db.get<Session>(KEY_SESSION);
-            if (authData?.refresh_token) {
-                await AuthService.refreshToken(authData.username, authData.refresh_token)
+
+            const session = await getSession();
+            if (!session) return;
+
+            if (session?.refresh_token && session.username) {
+                await refreshToken(session.username, session.refresh_token)
             } else {
                 void AuthService.logout();
             }
@@ -180,5 +148,69 @@ function getJwtExpiration(token: string): number | null {
     } catch (e) {
         console.error("Failed to parse JWT:", e);
         return null;
+    }
+}
+
+async function getSession() {
+    try {
+        const username = await db.get<string>(KEY_USERNAME);
+
+        if (!username) return null;
+
+        const tokens = await invoke<{ access: string, refresh: string }>('get_tokens');
+
+        const session: Session = {
+            access_token: tokens.access,
+            refresh_token: tokens.refresh,
+            username: username || null
+        }
+        return session;
+    } catch (err) {
+        return null
+    }
+
+}
+
+async function updateCredentials(data: LoginResponse, username: string) {
+    const session: Session = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        username: username
+    }
+
+    await db.set(KEY_USERNAME, session.username);
+    await db.save();
+
+    await invoke('save_tokens', {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token
+    })
+
+    authSession.set(session);
+    isAuthenticated.set(true);
+}
+
+async function refreshToken(username: string, refresh_token: string) {
+    if (logoutTimer) clearTimeout(logoutTimer);
+    if (isRefreshing) return false;
+    isRefreshing = true;
+
+    try {
+        const data = await api.post<LoginResponse>('/token/refresh', {
+            username,
+            refresh_token
+        });
+
+        await updateCredentials(data, username);
+
+        const exp = getJwtExpiration(data.access_token);
+        if (exp) await scheduleAutoRefresh(exp);
+
+        return true;
+    } catch (err: any) {
+        console.error("[AuthService] Refresh failed:", err);
+        await AuthService.logout();
+    } finally {
+        isRefreshing = false;
     }
 }

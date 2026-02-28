@@ -1,4 +1,4 @@
-use keyring::Entry;
+use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 const SERVICE_ACCESS: &str = "ServeMe_Access";
 const SERVICE_REFRESH: &str = "ServeMe_Refresh";
@@ -57,9 +57,18 @@ pub async fn get_access_token() -> Result<String, String> {
 #[tauri::command]
 pub async fn purge_tokens() -> Result<(), String> {
     let access_entry = Entry::new(SERVICE_ACCESS, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    let _ = access_entry.delete_credential().map_err(|e| e.to_string())?;
+    match access_entry.delete_credential() {
+        Ok(_) => {}
+        Err(KeyringError::NoEntry) => {}
+        Err(e) => return Err(e.to_string()),
+    }
 
     let refresh_entry = Entry::new(SERVICE_REFRESH, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    let _ = refresh_entry.delete_credential().map_err(|e| e.to_string())?;
+    match refresh_entry.delete_credential() {
+        Ok(_) => {}
+        Err(KeyringError::NoEntry) => {}
+        Err(e) => return Err(e.to_string()),
+    }
+
     Ok(())
 }
