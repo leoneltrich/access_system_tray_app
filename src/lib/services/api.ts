@@ -22,11 +22,8 @@ class ApiService {
             throw new Error("ERR_OFFLINE");
         }
 
-        // Clean trailing slash from base URL to prevent double slashes
-        // e.g. "https://api.com/" -> "https://api.com"
         const cleanBase = baseUrl.replace(/\/$/, "");
 
-        // Construct full URL: Base + Version Prefix + Endpoint
         const url = `${cleanBase}${API_PREFIX}${endpoint}`;
 
         const headers = {

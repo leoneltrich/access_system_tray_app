@@ -4,48 +4,62 @@ import {isAuthenticated, authLoading, authError, authSession, type Session} from
 import {mapBackendError} from "$lib/utils";
 import {get} from "svelte/store";
 import {invoke} from "@tauri-apps/api/core";
+import {listen} from "@tauri-apps/api/event";
 
 const KEY_USERNAME = 'username';
 let isRefreshing = false;
-
-let logoutTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface LoginResponse {
     access_token: string;
     refresh_token: string;
 }
 
+interface TokenPayload {
+    access: string;
+    refresh: string;
+}
+
 export const AuthService = {
     /**
      * Initialize Auth: Load token from disk and check if valid.
-     * Should be called in your root layout onMount.
+     * Starts the listener for background token refreshes.
      */
     async init() {
-        if (logoutTimer) clearTimeout(logoutTimer);
+        await this.setupRefreshListener();
 
         try {
             const session = await getSession();
-            if (!session) return;
+            if (!session || !session.access_token || !session.refresh_token || !session.username) {
+                return;
+            }
 
-            if (session?.access_token && session.refresh_token && session.username) {
-                const exp = getJwtExpiration(session.access_token);
-                const now = Math.floor(Date.now() / 1000);
+            const exp = getJwtExpiration(session.access_token);
+            const now = Math.floor(Date.now() / 1000);
 
-                if (exp && exp > now) {
-                    authSession.set(session);
-                    isAuthenticated.set(true);
-
-                    await scheduleAutoRefresh(exp);
-                    console.log("[AuthService] Session restored.");
-                } else {
-                    console.log("[AuthService] Access token expired. Attempting to refresh session...");
-                    await refreshToken(session.username, session.refresh_token);
-                }
+            if (exp && exp > now) {
+                authSession.set(session);
+                isAuthenticated.set(true);
+            } else {
+                await refreshToken(session.username, session.refresh_token);
             }
         } catch (err) {
             console.error("[AuthService] Init Error:", err);
             await this.logout();
         }
+    },
+
+    async setupRefreshListener() {
+        await listen<TokenPayload>("tokens-refreshed", (event) => {
+            const current = get(authSession);
+            if (!current) return;
+
+            authSession.set({
+                ...current,
+                access_token: event.payload.access,
+                refresh_token: event.payload.refresh
+            });
+            console.log("[AuthService] Session synced with background refresh.");
+        });
     },
 
     /**
@@ -63,9 +77,6 @@ export const AuthService = {
 
             if (data.access_token && data.refresh_token) {
                 await updateCredentials(data, username);
-
-                const exp = getJwtExpiration(data.access_token);
-                if (exp) await scheduleAutoRefresh(exp);
             }
 
         } catch (err: any) {
@@ -86,19 +97,15 @@ export const AuthService = {
      * Logout Function
      */
     async logout() {
-
         const session = get(authSession);
 
         try {
             if (session?.refresh_token) {
                 await api.post('/logout', {refresh_token: session.refresh_token});
             }
-            console.log("[AuthService] Server-side session invalidated.");
         } catch (err: any) {
             console.error("[AuthService] Server-side logout failed:", err.message);
         } finally {
-            if (logoutTimer) clearTimeout(logoutTimer);
-
             isAuthenticated.set(false);
             authSession.set(null);
 
@@ -110,30 +117,8 @@ export const AuthService = {
     },
 }
 
-async function scheduleAutoRefresh(expTimestamp: number) {
-    if (logoutTimer) clearTimeout(logoutTimer);
-
-    const now = Math.floor(Date.now() / 1000);
-    const leadTime = 30;
-    const timeLeft = (expTimestamp - now - leadTime) * 1000;
-
-    if (timeLeft > 0) {
-        logoutTimer = setTimeout(async () => {
-            console.log("[AuthService] Token almost expired. Refreshing...");
-
-            const session = await getSession();
-            if (!session) return;
-
-            if (session?.refresh_token && session.username) {
-                await refreshToken(session.username, session.refresh_token)
-            } else {
-                void AuthService.logout();
-            }
-        }, timeLeft);
-    }
-}
-
-function getJwtExpiration(token: string): number | null {
+function getJwtExpiration(token: string | null): number | null {
+    if (!token) return null;
     try {
         const payloadBase64 = token.split('.')[1];
         if (!payloadBase64) return null;
@@ -146,7 +131,6 @@ function getJwtExpiration(token: string): number | null {
         const parsed = JSON.parse(jsonPayload);
         return parsed.exp || null;
     } catch (e) {
-        console.error("Failed to parse JWT:", e);
         return null;
     }
 }
@@ -154,24 +138,24 @@ function getJwtExpiration(token: string): number | null {
 async function getSession() {
     try {
         const username = await db.get<string>(KEY_USERNAME);
-
         if (!username) return null;
 
-        const tokens = await invoke<{ access: string, refresh: string }>('get_tokens');
+        const tokens = await invoke<TokenPayload>('get_tokens');
 
         const session: Session = {
             access_token: tokens.access,
             refresh_token: tokens.refresh,
-            username: username || null
+            username: username
         }
         return session;
     } catch (err) {
         return null
     }
-
 }
 
-async function updateCredentials(data: LoginResponse, username: string) {
+async function updateCredentials(data: LoginResponse, username: string | null) {
+    if (!username) return;
+
     const session: Session = {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
@@ -190,9 +174,8 @@ async function updateCredentials(data: LoginResponse, username: string) {
     isAuthenticated.set(true);
 }
 
-async function refreshToken(username: string, refresh_token: string) {
-    if (logoutTimer) clearTimeout(logoutTimer);
-    if (isRefreshing) return false;
+async function refreshToken(username: string | null, refresh_token: string | null) {
+    if (!username || !refresh_token || isRefreshing) return false;
     isRefreshing = true;
 
     try {
@@ -202,10 +185,6 @@ async function refreshToken(username: string, refresh_token: string) {
         });
 
         await updateCredentials(data, username);
-
-        const exp = getJwtExpiration(data.access_token);
-        if (exp) await scheduleAutoRefresh(exp);
-
         return true;
     } catch (err: any) {
         console.error("[AuthService] Refresh failed:", err);

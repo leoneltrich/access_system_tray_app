@@ -54,6 +54,9 @@ pub fn run() {
             app.set_activation_policy(ActivationPolicy::Accessory);
 
             let handle = app.handle();
+            
+            // Start Background Refresh Worker
+            spawn_background_refresh(handle.clone());
 
             ui::tray::setup(handle)?;
             ui::windows::create(handle, WindowType::Dashboard)?;
