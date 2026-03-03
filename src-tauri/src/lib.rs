@@ -57,6 +57,9 @@ pub fn run() {
             
             // Start Background Refresh Worker
             spawn_background_refresh(handle.clone());
+            
+            // Start Lightweight Internal API Server
+            tauri::async_runtime::spawn(core::api::server::start_server(handle.clone()));
 
             ui::tray::setup(handle)?;
             ui::windows::create(handle, WindowType::Dashboard)?;

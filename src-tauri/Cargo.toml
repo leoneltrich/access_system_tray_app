@@ -26,10 +26,12 @@ tauri-plugin-os = "2"
 tauri-plugin-fs = "2.4.5"
 tauri-plugin-dialog = "2.6.0"
 serde_json = "1"
-reqwest = { version = "0.12", features = ["json"] }
-tokio = { version = "1", features = ["time", "rt", "macros"] }
+reqwest = { version = "0.13", features = ["json"] }
+tokio = { version = "1", features = ["time", "rt", "macros", "net", "io-util"] }
 chrono = "0.4"
 base64 = "0.22"
+aes-gcm = "0.10"
+rand = "0.10"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3.6", features = ["apple-native"] }
