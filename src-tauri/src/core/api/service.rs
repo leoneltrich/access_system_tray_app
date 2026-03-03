@@ -1,4 +1,11 @@
 use serde::Serialize;
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce
+};
+use base64::{engine::general_purpose, Engine as _};
+use rand::{thread_rng, RngCore};
+use crate::core::keychain::KeychainService;
 
 #[derive(Serialize)]
 pub struct TokenResponse {
@@ -10,15 +17,25 @@ pub struct TokenService;
 
 impl TokenService {
     pub async fn get_encrypted_token() -> Result<TokenResponse, String> {
-        // MOCK: In the real implementation, this will:
-        // 1. Get the 32-byte Master Key from Keychain
-        // 2. Get the Access Token from Keychain
-        // 3. Encrypt using AES-256-GCM
-        // 4. Return as Base64 strings
+        let master_key_bytes = KeychainService::get_or_create_master_key()?;
         
+        let session = KeychainService::get_session()
+            .map_err(|_| "No active session found. Please login.".to_string())?;
+        
+        let key = Aes256Gcm::new_from_slice(&master_key_bytes)
+            .map_err(|e| format!("Encryption key error: {}", e))?;
+        
+        let mut nonce_bytes = [0u8; 12];
+        thread_rng().fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+
+        let ciphertext = key
+            .encrypt(nonce, session.access_token.as_bytes())
+            .map_err(|e| format!("Encryption failed: {}", e))?;
+
         Ok(TokenResponse {
-            ciphertext: "MOCK_ENCRYPTED_TOKEN_BASE64".to_string(),
-            nonce: "MOCK_NONCE_BASE64".to_string(),
+            ciphertext: general_purpose::STANDARD.encode(ciphertext),
+            nonce: general_purpose::STANDARD.encode(nonce_bytes),
         })
     }
 }

@@ -1,13 +1,9 @@
 use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
-use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
-
-const SERVICE_ACCESS: &str = "ServeMe_Access";
-const SERVICE_REFRESH: &str = "ServeMe_Refresh";
-const ACCOUNT_NAME: &str = "current_session";
+use crate::core::keychain::KeychainService;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct TokenSet {
@@ -44,19 +40,19 @@ pub fn spawn_background_refresh(handle: AppHandle) {
 }
 
 async fn refresh_if_needed(handle: &AppHandle) -> Result<(), String> {
-    let tokens = match get_tokens().await {
-        Ok(t) => t,
+    let session = match KeychainService::get_session() {
+        Ok(s) => s,
         Err(_) => return Ok(()),
     };
 
-    if !should_refresh(&tokens.access)? {
+    if !should_refresh(&session.access_token)? {
         return Ok(());
     }
 
     let config = load_config(handle)?;
-    let response = request_new_tokens(&config, &tokens.refresh).await?;
+    let response = request_new_tokens(&config, &session.refresh_token).await?;
     
-    save_tokens(&response.access_token, &response.refresh_token).await?;
+    KeychainService::save_session(&response.access_token, &response.refresh_token)?;
 
     let new_tokens = TokenSet {
         access: response.access_token,
@@ -111,62 +107,31 @@ async fn request_new_tokens(config: &Config, refresh_token: &str) -> Result<Refr
 
 #[tauri::command]
 pub async fn save_tokens(access_token: &str, refresh_token: &str) -> Result<(), String> {
-    let access_entry = Entry::new(SERVICE_ACCESS, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    access_entry
-        .set_password(access_token)
-        .map_err(|e| e.to_string())?;
-
-    let refresh_entry = Entry::new(SERVICE_REFRESH, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    refresh_entry
-        .set_password(refresh_token)
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    KeychainService::save_session(access_token, refresh_token)
 }
 
 #[tauri::command]
 pub async fn get_tokens() -> Result<TokenSet, String> {
-    let access_entry = Entry::new(SERVICE_ACCESS, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    let access_token = access_entry.get_password().map_err(|e| e.to_string())?;
-
-    let refresh_entry = Entry::new(SERVICE_REFRESH, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    let refresh_token = refresh_entry.get_password().map_err(|e| e.to_string())?;
+    let session = KeychainService::get_session()?;
     Ok(TokenSet {
-        access: access_token,
-        refresh: refresh_token,
+        access: session.access_token,
+        refresh: session.refresh_token,
     })
 }
 
 #[tauri::command]
 pub async fn get_refresh_token() -> Result<String, String> {
-    let refresh_entry = Entry::new(SERVICE_REFRESH, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    let refresh_token = refresh_entry.get_password().map_err(|e| e.to_string())?;
-
-    Ok(refresh_token)
+    let session = KeychainService::get_session()?;
+    Ok(session.refresh_token)
 }
 
 #[tauri::command]
 pub async fn get_access_token() -> Result<String, String> {
-    let access_entry = Entry::new(SERVICE_ACCESS, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    let access_token = access_entry.get_password().map_err(|e| e.to_string())?;
-
-    Ok(access_token)
+    let session = KeychainService::get_session()?;
+    Ok(session.access_token)
 }
 
 #[tauri::command]
 pub async fn purge_tokens() -> Result<(), String> {
-    let access_entry = Entry::new(SERVICE_ACCESS, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    match access_entry.delete_credential() {
-        Ok(_) => {}
-        Err(KeyringError::NoEntry) => {}
-        Err(e) => return Err(e.to_string()),
-    }
-
-    let refresh_entry = Entry::new(SERVICE_REFRESH, ACCOUNT_NAME).map_err(|e| e.to_string())?;
-    match refresh_entry.delete_credential() {
-        Ok(_) => {}
-        Err(KeyringError::NoEntry) => {}
-        Err(e) => return Err(e.to_string()),
-    }
-
-    Ok(())
+    KeychainService::purge_session()
 }

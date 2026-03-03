@@ -10,6 +10,7 @@ use tauri_plugin_autostart::MacosLauncher;
 
 use state::AppState;
 use ui::definitions::WindowType;
+use crate::core::keychain::KeychainService;
 
 use crate::api::auth::*;
 use crate::api::extensions::{cleanup_processes, list_extensions, run_extension, stop_extension, upload_extension, delete_extension};
@@ -55,10 +56,10 @@ pub fn run() {
 
             let handle = app.handle();
             
-            // Start Background Refresh Worker
+            let _ = KeychainService::get_or_create_master_key();
+
             spawn_background_refresh(handle.clone());
-            
-            // Start Lightweight Internal API Server
+
             tauri::async_runtime::spawn(core::api::server::start_server(handle.clone()));
 
             ui::tray::setup(handle)?;
