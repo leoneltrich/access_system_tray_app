@@ -4,7 +4,7 @@ use aes_gcm::{
     Aes256Gcm, Nonce
 };
 use base64::{engine::general_purpose, Engine as _};
-use rand::{thread_rng, RngCore};
+use rand::{rng, Rng};
 use crate::core::keychain::KeychainService;
 
 #[derive(Serialize)]
@@ -26,7 +26,7 @@ impl TokenService {
             .map_err(|e| format!("Encryption key error: {}", e))?;
         
         let mut nonce_bytes = [0u8; 12];
-        thread_rng().fill_bytes(&mut nonce_bytes);
+        rng().fill_bytes(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         let ciphertext = key

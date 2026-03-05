@@ -1,6 +1,6 @@
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
-use rand::{thread_rng, RngCore};
+use rand::{rng, Rng};
 use base64::{engine::general_purpose, Engine as _};
 
 const SERVICE_SESSION: &str = "ServeMe_Session";
@@ -52,7 +52,7 @@ impl KeychainService {
             }
             Err(keyring::Error::NoEntry) => {
                 let mut key = [0u8; 32];
-                thread_rng().fill_bytes(&mut key);
+                rng().fill_bytes(&mut key);
                 let base64_key = general_purpose::STANDARD.encode(key);
                 
                 entry.set_password(&base64_key).map_err(|e| e.to_string())?;

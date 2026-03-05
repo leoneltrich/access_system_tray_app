@@ -91,7 +91,10 @@ fn load_config(handle: &AppHandle) -> Result<Config, String> {
 async fn request_new_tokens(config: &Config, refresh_token: &str) -> Result<RefreshResponse, String> {
     let url = format!("{}/api/v1/token/refresh", config.server_url.trim_end_matches('/'));
     
-    reqwest::Client::new()
+    reqwest::Client::builder()
+        .user_agent("ServeMe/0.2.0")
+        .build()
+        .map_err(|e| e.to_string())?
         .post(url)
         .json(&serde_json::json!({
             "username": config.username,

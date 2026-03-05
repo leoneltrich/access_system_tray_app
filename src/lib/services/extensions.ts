@@ -1,5 +1,4 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { readFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { basename } from '@tauri-apps/api/path'; // To get the filename from a path
 
@@ -40,24 +39,13 @@ export const ExtensionService = {
                 throw new Error("File selection cancelled.");
             }
 
-            // 3. Extract the filename from the path
-            const fileName = await basename(selectedPath);
-            if (!fileName) {
-                throw new Error("Could not determine filename from selected path.");
-            }
-
-            // 4. Read binary content
-            const fileContent = await readFile(selectedPath);
-
-            // 5. Invoke upload command
             await invoke('upload_extension', { 
-                name: fileName, 
-                data: Array.from(fileContent)
+                sourcePath: selectedPath
             });
 
-            return fileName;
+            const fileName = await basename(selectedPath);
+            return fileName || "unknown extension";
         } finally {
-            // 6. Restore auto-hide behavior
             await invoke('set_dialog_status', { isOpen: false });
         }
     },

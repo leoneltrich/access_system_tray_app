@@ -18,7 +18,7 @@ pub struct ExtensionInfo {
 pub async fn list_extensions<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
-) -> Result<Vec<ExtensionInfo>, String> { // TODO Refactor this
+) -> Result<Vec<ExtensionInfo>, String> {
     let extensions_dir = construct_extensions_dir_path(app.clone())?;
 
     if !extensions_dir.exists() {
@@ -32,7 +32,9 @@ pub async fn list_extensions<R: Runtime>(
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
 
-        if path.is_file() {
+        let is_app = path.is_dir() && path.extension().map_or(false, |e| e == "app");
+
+        if path.is_file() || is_app {
             if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
                 let id = filename.to_string();
                 let mut is_running = false;
@@ -63,7 +65,6 @@ pub async fn list_extensions<R: Runtime>(
         }
     }
 
-    // Sort alphabetically by name
     list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
     Ok(list)
@@ -72,30 +73,59 @@ pub async fn list_extensions<R: Runtime>(
 #[tauri::command]
 pub async fn upload_extension<R: Runtime>(
     app: AppHandle<R>,
-    name: String,
-    data: Vec<u8>,
+    source_path: String,
 ) -> Result<(), String> {
-    let extensions_dir = construct_extensions_dir_path(app)?;
+    let source = std::path::PathBuf::from(&source_path);
+    if !source.exists() {
+        return Err(format!("Source path '{}' does not exist", source_path));
+    }
 
+    let name = source.file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| "Invalid source filename".to_string())?
+        .to_string();
+
+    let extensions_dir = construct_extensions_dir_path(app)?;
     fs::create_dir_all(&extensions_dir)
         .map_err(|e| format!("Failed to create extensions directory: {}", e))?;
 
     handle_single_version_constraint(&name, &extensions_dir)?;
 
     let mut target_path = extensions_dir.clone();
-    target_path.push(name);
+    target_path.push(&name);
 
-    fs::write(&target_path, data).map_err(|e| {
-        format!(
-            "Failed to write extension file '{}': {}",
-            target_path.display(),
-            e
-        )
-    })?;
+    if source.is_dir() {
+        copy_dir_recursive(&source, &target_path)
+            .map_err(|e| format!("Failed to copy directory extension: {}", e))?;
+    } else {
+        fs::copy(&source, &target_path).map_err(|e| {
+            format!(
+                "Failed to copy extension file '{}': {}",
+                target_path.display(),
+                e
+            )
+        })?;
+    }
 
     #[cfg(unix)]
-    set_permissions_unix(&mut target_path)?;
+    if target_path.is_file() {
+        set_permissions_unix(&mut target_path)?;
+    }
 
+    Ok(())
+}
+
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            copy_dir_recursive(&entry.path(), &dst.join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.join(entry.file_name()))?;
+        }
+    }
     Ok(())
 }
 
@@ -123,8 +153,15 @@ pub async fn run_extension<R: Runtime>(
         return Err(format!("Extension '{}' not found", id));
     }
 
-    let child = std::process::Command::new(&path)
-        .spawn()
+    let mut command = if path.is_dir() && path.extension().map_or(false, |e| e == "app") {
+        let mut cmd = std::process::Command::new("open");
+        cmd.arg("-W").arg(&path);
+        cmd
+    } else {
+        std::process::Command::new(&path)
+    };
+
+    let child = command.spawn()
         .map_err(|e| format!("Failed to spawn extension '{}': {}", id, e))?;
 
     running.insert(id, child);
@@ -139,17 +176,12 @@ pub async fn stop_extension(
     let mut running = state.running_extensions.lock().unwrap();
 
     if let Some(mut child) = running.remove(&id) {
-        child.kill().map_err(|e| {
-            running.insert(id.clone(), child);
-            format!("Failed to kill extension '{}': {}", id, e)
-        })?;
+        let _ = child.kill();
     }
 
     Ok(())
 }
-/**
-Cleans up by stopping all extensions before the app exits
-**/
+
 pub fn cleanup_processes(state: &AppState) {
     let mut running = state.running_extensions.lock().unwrap();
     for (_id, mut child) in running.drain() {
@@ -157,17 +189,14 @@ pub fn cleanup_processes(state: &AppState) {
     }
 }
 
-/**
-Ensures that only a single version of an extension is installed.
-**/
-fn handle_single_version_constraint(name: &String, extensions_dir: &PathBuf) -> Result<(), String> {
+fn handle_single_version_constraint(name: &String, extensions_dir: &std::path::PathBuf) -> Result<(), String> {
     let base_name = get_base_name(&name);
     clean_old_versions(&extensions_dir, &base_name)?;
     Ok(())
 }
 
 #[cfg(unix)]
-fn set_permissions_unix(target_path: &mut PathBuf) -> Result<(), String> {
+fn set_permissions_unix(target_path: &mut std::path::PathBuf) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     let mut perms = fs::metadata(&target_path)
         .map_err(|e| {
@@ -190,7 +219,7 @@ fn set_permissions_unix(target_path: &mut PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-fn construct_extensions_dir_path<R: Runtime>(app: AppHandle<R>) -> Result<PathBuf, String> {
+fn construct_extensions_dir_path<R: Runtime>(app: AppHandle<R>) -> Result<std::path::PathBuf, String> {
     let mut extensions_dir = app
         .path()
         .app_data_dir()
@@ -206,33 +235,34 @@ pub async fn delete_extension<R: Runtime>(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<(), String> {
-    // 1. Force stop if running
     let mut running = state.running_extensions.lock().unwrap();
     if let Some(mut child) = running.remove(&id) {
         let _ = child.kill();
     }
-    drop(running); // Release lock before I/O
+    drop(running);
 
-    // 2. Remove file
     let mut path = construct_extensions_dir_path(app)?;
     path.push(&id);
 
     if path.exists() {
-        fs::remove_file(path).map_err(|e| format!("Failed to delete file: {}", e))?;
+        if path.is_dir() {
+            fs::remove_dir_all(path).map_err(|e| format!("Failed to delete directory: {}", e))?;
+        } else {
+            fs::remove_file(path).map_err(|e| format!("Failed to delete file: {}", e))?;
+        }
     }
 
     Ok(())
 }
 
 fn get_version(full_file_name: &str) -> String {
-    let path = PathBuf::from(full_file_name);
+    let path = std::path::PathBuf::from(full_file_name);
     let file_stem = path
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or(full_file_name);
 
     if let Some(index) = file_stem.rfind(VERSION_SEPARATOR) {
-        // Extract everything after the separator
         file_stem[index + VERSION_SEPARATOR.len()..]
             .trim()
             .to_string()
@@ -242,7 +272,7 @@ fn get_version(full_file_name: &str) -> String {
 }
 
 fn get_base_name(full_file_name: &str) -> String {
-    let path = PathBuf::from(full_file_name);
+    let path = std::path::PathBuf::from(full_file_name);
 
     let file_stem = path
         .file_stem()
@@ -256,7 +286,7 @@ fn get_base_name(full_file_name: &str) -> String {
     }
 }
 
-fn clean_old_versions(extensions_dir: &PathBuf, base_name: &str) -> Result<(), String> {
+fn clean_old_versions(extensions_dir: &std::path::PathBuf, base_name: &str) -> Result<(), String> {
     if !extensions_dir.exists() {
         return Ok(());
     }
@@ -267,11 +297,18 @@ fn clean_old_versions(extensions_dir: &PathBuf, base_name: &str) -> Result<(), S
         let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
         let path = entry.path();
 
-        if path.is_file() {
+        let is_app = path.is_dir() && path.extension().map_or(false, |e| e == "app");
+
+        if path.is_file() || is_app {
             if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
                 if get_base_name(file_name) == base_name {
-                    fs::remove_file(&path)
-                        .map_err(|e| format!("Failed to remove file '{}': {}", file_name, e))?;
+                    if path.is_dir() {
+                        fs::remove_dir_all(&path)
+                            .map_err(|e| format!("Failed to remove directory '{}': {}", file_name, e))?;
+                    } else {
+                        fs::remove_file(&path)
+                            .map_err(|e| format!("Failed to remove file '{}': {}", file_name, e))?;
+                    }
                 }
             }
         }
