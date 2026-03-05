@@ -80,7 +80,7 @@ pub fn run() {
                     }
                 }
                 Exit => {
-                    cleanup_processes(&state);
+                    cleanup_processes(app_handle, &state);
                 }
                 _ => {}
             }
