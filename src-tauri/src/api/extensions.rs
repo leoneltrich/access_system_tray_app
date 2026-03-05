@@ -164,16 +164,37 @@ pub fn cleanup_processes<R: Runtime>(app: &AppHandle<R>, state: &AppState) {
 // --- Helpers: Process Management ---
 
 fn spawn_extension_process(path: &Path, id: &str) -> Result<Child, String> {
-    let mut command = if is_macos_app(path) {
-        let mut cmd = Command::new("open");
-        cmd.arg("-W").arg(path);
-        cmd
-    } else {
-        Command::new(path)
-    };
+    #[cfg(target_os = "macos")]
+    {
+        if is_macos_app(path) {
+            let mut cmd = Command::new("open");
+            cmd.arg("-W").arg(path);
+            return cmd.spawn().map_err(|e| format!("Failed to spawn extension '{}': {}", id, e));
+        }
+    }
 
-    command.spawn()
+    #[cfg(target_os = "windows")]
+    {
+        if is_windows_script(path) {
+            let mut cmd = Command::new("cmd");
+            cmd.arg("/C").arg(path);
+            return cmd.spawn().map_err(|e| format!("Failed to spawn extension '{}': {}", id, e));
+        }
+    }
+
+    Command::new(path)
+        .spawn()
         .map_err(|e| format!("Failed to spawn extension '{}': {}", id, e))
+}
+
+#[cfg(target_os = "windows")]
+fn is_windows_script(path: &Path) -> bool {
+    path.extension()
+        .map(|ext| {
+            let ext = ext.to_string_lossy().to_lowercase();
+            ext == "bat" || ext == "cmd"
+        })
+        .unwrap_or(false)
 }
 
 fn terminate_extension<R: Runtime>(app: &AppHandle<R>, id: &str, mut child: Child) {

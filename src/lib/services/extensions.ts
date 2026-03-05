@@ -1,6 +1,7 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
-import { basename } from '@tauri-apps/api/path'; // To get the filename from a path
+import { basename } from '@tauri-apps/api/path';
+import { platform } from '@tauri-apps/plugin-os';
 
 export interface Extension {
     id: string;
@@ -19,16 +20,23 @@ export const ExtensionService = {
      * @throws {Error} If file selection is cancelled, read fails, or upload fails.
      */
     async add(): Promise<string> {
-        // 1. Prevent auto-hide
         await invoke('set_dialog_status', { isOpen: true });
 
         try {
-            // 2. Open file selection dialog
+            const currentPlatform = platform();
+            let extensions = ['bin', 'sh'];
+
+            if (currentPlatform === 'windows') {
+                extensions = ['exe', 'bat', 'cmd'];
+            } else if (currentPlatform === 'macos') {
+                extensions.push('app');
+            }
+
             const selectedPath = await open({
                 multiple: false,
                 filters: [{
                     name: 'Executable Files',
-                    extensions: ['exe', 'bin', 'sh', 'app']
+                    extensions: extensions
                 }, {
                     name: 'All Files',
                     extensions: ['*']
