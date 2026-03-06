@@ -2,9 +2,9 @@ use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tauri::AppHandle;
-use crate::core::api::service::TokenService;
+use crate::core::api::service::{TokenService, ConfigService};
 
-pub async fn start_server(_handle: AppHandle) {
+pub async fn start_server(handle: AppHandle) {
     let addr = SocketAddr::from(([127, 0, 0, 1], 35555));
     let listener = match TcpListener::bind(addr).await {
         Ok(l) => l,
@@ -17,42 +17,54 @@ pub async fn start_server(_handle: AppHandle) {
     println!("[Token Server] Listening on http://127.0.0.1:35555");
 
     loop {
-        match listener.accept().await {
-            Ok((mut socket, _)) => {
-                tokio::spawn(async move {
-                    let mut buffer = [0; 1024];
-                    if let Ok(n) = socket.read(&mut buffer).await {
-                        let request = String::from_utf8_lossy(&buffer[..n]);
-                        
-                        if request.starts_with("GET /token") {
-                            handle_get_token(&mut socket).await;
-                        } else {
-                            handle_not_found(&mut socket).await;
-                        }
-                    }
-                });
-            }
-            Err(e) => eprintln!("[Token Server] Connection failed: {}", e),
+        if let Ok((mut socket, _)) = listener.accept().await {
+            let handle_clone = handle.clone();
+            tokio::spawn(async move {
+                handle_client(&mut socket, handle_clone).await;
+            });
         }
+    }
+}
+
+async fn handle_client(socket: &mut tokio::net::TcpStream, handle: AppHandle) {
+    let mut buffer = [0; 1024];
+    let n = match socket.read(&mut buffer).await {
+        Ok(n) if n > 0 => n,
+        _ => return,
+    };
+
+    let request = String::from_utf8_lossy(&buffer[..n]);
+    let path = request.lines().next().unwrap_or("").split_whitespace().nth(1).unwrap_or("");
+
+    match path {
+        "/token" => handle_get_token(socket).await,
+        "/config" => handle_get_config(socket, &handle).await,
+        _ => send_error(socket, 404, "Not Found").await,
     }
 }
 
 async fn handle_get_token(socket: &mut tokio::net::TcpStream) {
     match TokenService::get_encrypted_token().await {
-        Ok(token_response) => {
-            let body = serde_json::to_string(&token_response).unwrap_or_default();
-            send_response(socket, 200, "application/json", &body).await;
-        }
-        Err(e) => {
-            let error_json = serde_json::json!({ "error": e }).to_string();
-            send_response(socket, 500, "application/json", &error_json).await;
-        }
+        Ok(res) => send_json(socket, 200, &res).await,
+        Err(e) => send_error(socket, 500, &e).await,
     }
 }
 
-async fn handle_not_found(socket: &mut tokio::net::TcpStream) {
-    let body = "{\"error\": \"Not Found\"}";
-    send_response(socket, 404, "application/json", body).await;
+async fn handle_get_config(socket: &mut tokio::net::TcpStream, handle: &AppHandle) {
+    match ConfigService::get_config(handle) {
+        Ok(res) => send_json(socket, 200, &res).await,
+        Err(e) => send_error(socket, 500, &e).await,
+    }
+}
+
+async fn send_json<T: serde::Serialize>(socket: &mut tokio::net::TcpStream, status: u16, data: &T) {
+    let body = serde_json::to_string(data).unwrap_or_default();
+    send_response(socket, status, "application/json", &body).await;
+}
+
+async fn send_error(socket: &mut tokio::net::TcpStream, status: u16, message: &str) {
+    let body = serde_json::json!({ "error": message }).to_string();
+    send_response(socket, status, "application/json", &body).await;
 }
 
 async fn send_response(socket: &mut tokio::net::TcpStream, status: u16, content_type: &str, body: &str) {
@@ -64,11 +76,7 @@ async fn send_response(socket: &mut tokio::net::TcpStream, status: u16, content_
     };
 
     let response = format!(
-        "HTTP/1.1 {} {}\r\n\
-         Content-Type: {}\r\n\
-         Content-Length: {}\r\n\
-         Connection: close\r\n\r\n\
-         {}",
+        "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         status, status_text, content_type, body.len(), body
     );
 

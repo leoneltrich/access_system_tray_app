@@ -5,12 +5,18 @@ use aes_gcm::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use rand::{rng, Rng};
+use tauri::{AppHandle, Manager};
 use crate::core::keychain::KeychainService;
 
 #[derive(Serialize)]
 pub struct TokenResponse {
     pub ciphertext: String,
     pub nonce: String,
+}
+
+#[derive(Serialize)]
+pub struct ConfigResponse {
+    pub server_url: String,
 }
 
 pub struct TokenService;
@@ -37,5 +43,28 @@ impl TokenService {
             ciphertext: general_purpose::STANDARD.encode(ciphertext),
             nonce: general_purpose::STANDARD.encode(nonce_bytes),
         })
+    }
+}
+
+pub struct ConfigService;
+
+impl ConfigService {
+    pub fn get_config(handle: &AppHandle) -> Result<ConfigResponse, String> {
+        let path = handle.path().app_config_dir()
+            .map_err(|e| e.to_string())?
+            .join("settings.json");
+
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read config: {}", e))?;
+
+        let json: serde_json::Value = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse config: {}", e))?;
+
+        let server_url = json.get("server_url")
+            .and_then(|v| v.as_str())
+            .ok_or("server_url not found in config")?
+            .to_string();
+
+        Ok(ConfigResponse { server_url })
     }
 }
