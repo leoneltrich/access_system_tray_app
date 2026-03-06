@@ -103,7 +103,7 @@
 
         <hr class="divider" />
 
-        <form class="settings-form" id="settings-form" onsubmit={handleSave}>
+        <form class="settings-form margin-bottom-40px" id="settings-form" onsubmit={handleSave}>
             {#if !$isSettingsLoaded}
                 <div class="skeleton-input"></div>
             {:else}
@@ -143,6 +143,9 @@
 </PageView>
 
 <style>
+    .margin-bottom-40px {
+        margin-bottom: 40px;
+    }
     .view-body { flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
     .settings-form { display: flex; flex-direction: column; flex: 1;}
 
