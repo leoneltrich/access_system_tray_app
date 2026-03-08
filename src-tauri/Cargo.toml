@@ -1,6 +1,6 @@
 [package]
 name = "serve-me"
-version = "0.2.0"
+version = "0.2.1"
 description = "An app to get access to servers and more"
 authors = ["Leon Eltrich"]
 edition = "2021"

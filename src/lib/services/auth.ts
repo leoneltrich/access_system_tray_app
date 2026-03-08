@@ -42,9 +42,12 @@ export const AuthService = {
             } else {
                 await refreshToken(session.username, session.refresh_token);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("[AuthService] Init Error:", err);
-            await this.logout();
+            // Only logout on explicit auth failure. Network errors should not log the user out.
+            if (err.message === 'ERR_AUTH' || err.message === 'ERR_FORBIDDEN') {
+                await this.logout();
+            }
         }
     },
 
@@ -188,7 +191,11 @@ async function refreshToken(username: string | null, refresh_token: string | nul
         return true;
     } catch (err: any) {
         console.error("[AuthService] Refresh failed:", err);
-        await AuthService.logout();
+        // Only logout on explicit auth failure. Network errors should not log the user out.
+        if (err.message === 'ERR_AUTH' || err.message === 'ERR_FORBIDDEN') {
+            await AuthService.logout();
+        }
+        return false;
     } finally {
         isRefreshing = false;
     }
